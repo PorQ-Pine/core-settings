@@ -1,8 +1,7 @@
 use crate::{CoreSettings, DialogType};
 use slint::SharedString;
 
-use anyhow;
-use log::error;
+use log::{info, error};
 
 pub mod users;
 
@@ -22,6 +21,13 @@ pub fn toast_timer_loop_check(gui: &CoreSettings) {
             }
         }
     }
+}
+
+fn toast(gui: &CoreSettings, message: &str) {
+    gui.set_sticky_toast(false);
+    gui.set_dialog_message(SharedString::from(message));
+    gui.set_dialog(DialogType::Toast);
+    info!("{}", &message);
 }
 
 pub fn error_toast(gui: &CoreSettings, message: &str, e: anyhow::Error) {

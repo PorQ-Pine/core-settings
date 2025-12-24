@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use anyhow::{Context, Result};
 use log::info;
 use slint::{Timer, TimerMode};
@@ -8,6 +10,8 @@ mod gui_fn;
 fn main() -> Result<()> {
     env_logger::init();
     info!("Core Settings initializing");
+
+    let pubkey = libqinit::signing::read_public_key()?;
 
     let gui = CoreSettings::new().with_context(|| "Failed to initialize Slint UI")?;
     let gui_weak = gui.as_weak();
@@ -40,6 +44,45 @@ fn main() -> Result<()> {
         move |user| {
             if let Some(gui) = gui_weak.upgrade() {
                 gui_fn::users::get_user_details(&gui, user)
+            }
+        }
+    });
+
+    let encryption_change_password_timer = Rc::new(Timer::default());
+    gui.on_change_user_password({
+        let gui_weak = gui_weak.clone();
+        let pubkey = pubkey.clone();
+        move |user, old_password, new_password, encrypted_storage_was_disabled| {
+            gui_fn::users::change_user_password(
+                gui_weak.clone(),
+                user,
+                old_password,
+                new_password,
+                encrypted_storage_was_disabled,
+                &pubkey,
+                &encryption_change_password_timer
+            )
+        }
+    });
+
+    let encryption_disable_timer = Rc::new(Timer::default());
+    gui.on_disable_storage_encryption({
+        let gui_weak = gui_weak.clone();
+        let pubkey = pubkey.clone();
+        move |user, password| {
+            gui_fn::users::disable_storage_encryption(gui_weak.clone(), user, password, &pubkey, &encryption_disable_timer);
+        }
+    });
+
+    // Virtual keyboard
+    gui.global::<VirtualKeyboardHandler>().on_key_pressed({
+        let gui_weak = gui_weak.clone();
+        move |key| {
+            if let Some(gui) = gui_weak.upgrade() {
+                gui.window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed { text: key.clone() });
+                gui.window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyReleased { text: key });
             }
         }
     });

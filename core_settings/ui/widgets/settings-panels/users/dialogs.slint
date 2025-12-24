@@ -1,0 +1,145 @@
+import { Properties as P } from "../../../../ui-common/properties.slint";
+import { DialogType, SystemUser } from "../../../enumerations.slint";
+
+import { HLine } from "../../../../ui-common/hline.slint";
+import { LineEdit } from "../../../../ui-common/lineedit.slint";
+import { Button } from "../../../../ui-common/button.slint";
+import { IconButton } from "../../../../ui-common/iconbutton.slint";
+
+export component UserDialogs inherits Rectangle {
+    in-out property <DialogType> dialog;
+    in-out property <string> dialog-message;
+    in-out property <SystemUser> selected-user;
+    in-out property <bool> sticky-toast;
+
+    callback change-user-password(string, string, string, bool);
+    callback disable-storage-encryption(string, string);
+
+    border-width: P.dialog-rectangle-thickness;
+    border-color: black;
+    border-radius: P.radius;
+    background: white;
+    width: P.rwidth * 0.45;
+    height: P.rheight * 0.4;
+    x: (P.rwidth - self.width) / 2;
+    y: P.rheight - self.height - P.approx-keyboard-height - P.space-between-keyboard-and-widget;
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        enabled: true;
+    }
+
+    VerticalLayout {
+        padding: P.layout-padding;
+        HorizontalLayout {
+            IconButton {
+                icon: @image-url("../../../../icons/arrow-back.svg");
+                border-radius: P.radius;
+                height: P.icon-button-height;
+                width: self.height;
+                y: (parent.height - self.height) / 2;
+                clicked => {
+                    TextInputInterface.text-input-focused = false;
+                    dialog = DialogType.None;
+                }
+            }
+
+            Text {
+                text: dialog == DialogType.EncryptionChangePassword ? "Changing password" : dialog == DialogType.EncryptionConfirmPassword ? "Confirming password" : "Setting password";
+                font-family: P.header-font-family;
+                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                font-weight: P.bold-font-weight;
+                wrap: word-wrap;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Rectangle {
+                height: P.icon-button-height;
+                width: self.height;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+
+        HLine {
+            top-padding-multiplier: 4.0;
+            bottom-padding-multiplier: self.top-padding-multiplier;
+        }
+
+        encryption-current-password-edit := LineEdit {
+            default-height: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionConfirmPassword ? parent.height * 0.08 : 0;
+            scaling-factor: P.scaling-factor;
+            border-radius: P.radius;
+            font-size: P.default-font-size * P.dialog-sizes-multiplier;
+            placeholder-text: "Current password";
+            input-type: password;
+            visible: dialog != DialogType.EncryptionNewPassword;
+        }
+
+        Rectangle {
+            vertical-stretch: dialog == DialogType.EncryptionChangePassword ? 0.05 : 0;
+        }
+
+        encryption-new-password-edit := LineEdit {
+            default-height: parent.height * 0.08;
+            scaling-factor: P.scaling-factor;
+            border-radius: P.radius;
+            font-size: P.default-font-size * P.dialog-sizes-multiplier;
+            placeholder-text: "New password";
+            visible: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword;
+            input-type: password;
+        }
+
+        Rectangle {
+            vertical-stretch: 0.05;
+            visible: dialog == DialogType.EncryptionChangePassword;
+        }
+
+        encryption-confirm-password-edit := LineEdit {
+            default-height: parent.height * 0.08;
+            scaling-factor: P.scaling-factor;
+            border-radius: P.radius;
+            font-size: P.default-font-size * P.dialog-sizes-multiplier;
+            placeholder-text: "Confirm new password";
+            visible: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword;
+            input-type: password;
+        }
+
+        Rectangle { }
+
+        Button {
+            width: 100%;
+            height: P.button-height * P.dialog-sizes-multiplier;
+            font-family: P.header-font-family;
+            font-size: P.default-font-size * P.dialog-sizes-multiplier;
+            border-radius: P.radius;
+            text: "Confirm";
+            clicked => {
+                if encryption-current-password-edit.text.is-empty && dialog != DialogType.EncryptionNewPassword {
+                    dialog-message = "Please provide current password";
+                    dialog = DialogType.Toast;
+                } else if encryption-new-password-edit.text != encryption-confirm-password-edit.text && (dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword) {
+                    dialog-message = "Passwords do not match";
+                    dialog = DialogType.Toast;
+                } else if encryption-new-password-edit.text == encryption-confirm-password-edit.text && encryption-new-password-edit.text.is-empty && (dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword) {
+                    dialog-message = "Cannot set empty password";
+                    dialog = DialogType.Toast;
+                } else {
+                    if dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword {
+                        dialog-message = "Setting password";
+                    } else if dialog == DialogType.EncryptionConfirmPassword {
+                        dialog-message = "Disabling encrypted storage"
+                    }
+                    if dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword {
+                        change-user-password(selected-user.name, encryption-current-password-edit.text, encryption-new-password-edit.text, !selected-user.encryption);
+                    } else if dialog == DialogType.EncryptionConfirmPassword {
+                        disable-storage-encryption(selected-user.name, encryption-current-password-edit.text);
+                    }
+                    sticky-toast = true;
+                    dialog = DialogType.Toast;
+                }
+                TextInputInterface.text-input-focused = false;
+            }
+        }
+    }
+}

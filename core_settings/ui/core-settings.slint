@@ -4,8 +4,17 @@ import { Page, SettingsPage, DialogType, SystemUser } from "enumerations.slint";
 import { SettingsMenu } from "widgets/settings-menu.slint";
 import { IconButton } from "../ui-common/iconbutton.slint";
 import { HLine } from "../ui-common/hline.slint";
+import { Toast } from "../ui-common/toast.slint";
+import {
+    VirtualKeyboard,
+    VirtualKeyboardHandler,
+    KeyModel,
+} from "../ui-common/virtual_keyboard/virtual_keyboard.slint";
+export { VirtualKeyboardHandler, KeyModel }
 
 import { ScrollView } from "std-widgets.slint";
+
+import { UserDialogs } from "widgets/settings-panels/users/dialogs.slint";
 
 export component CoreSettings inherits Window {
     // Properties
@@ -17,8 +26,8 @@ export component CoreSettings inherits Window {
     in-out property <DialogType> dialog;
     in-out property <SystemUser> selected-user;
     in-out property <int> dialog-millis-count;
-    in property <string> dialog-message;
-    in property <bool> sticky-toast;
+    in-out property <string> dialog-message;
+    in-out property <bool> sticky-toast;
 
     in-out property <string> section-header-title: core-settings-header;
     in property <string> default-user;
@@ -31,6 +40,8 @@ export component CoreSettings inherits Window {
     // Callbacks
     callback get-users();
     callback get-selected-user-details(string);
+    callback change-user-password(string, string, string, bool);
+    callback disable-storage-encryption(string, string);
 
     // UI
     ScrollView {
@@ -90,8 +101,8 @@ export component CoreSettings inherits Window {
                     get-users();
                 }
 
-                get-selected-user-details(string) => {
-                    get-selected-user-details(string);
+                get-selected-user-details(user) => {
+                    get-selected-user-details(user);
                 }
             }
         }
@@ -108,25 +119,48 @@ export component CoreSettings inherits Window {
             }
         }
 
-        if (dialog == DialogType.Toast): Rectangle {
-            width: 0.5 * root.width;
-            height: 0.07 * root.height;
+        if (dialog == DialogType.Toast): Toast {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-color: black;
-            border-width: P.dialog-rectangle-thickness;
-            border-radius: P.radius;
-            background: white;
-            TouchArea {
-                width: parent.width;
-                height: parent.height;
-                enabled: true;
+            dialog-message <=> dialog-message;
+        }
+
+        if (dialog == DialogType.EncryptionConfirmPassword || dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword): UserDialogs {
+            dialog <=> dialog;
+            dialog-message <=> dialog-message;
+            selected-user <=> selected-user;
+            sticky-toast <=> sticky-toast;
+
+            change-user-password(user, old-password, new-password, encrypted-storage-was-disabled) => {
+                change-user-password(user, old-password, new-password, encrypted-storage-was-disabled);
             }
 
-            Text {
-                text: dialog-message;
+            disable-storage-encryption(user, password) => {
+                disable-storage-encryption(user, password);
+            }
+        }
+    }
+
+    // Virtual keyboard
+    ScrollView {
+        VerticalLayout {
+            alignment: end;
+            visible: TextInputInterface.text-input-focused;
+            changed visible => {
+                if (self.visible == false) {
+                    VirtualKeyboardHandler.current-key-set = 0;
+                    i-keyboard.shift = false;
+                }
+            }
+            i-keyboard := VirtualKeyboard {
                 font-family: P.header-font-family;
-                font-weight: P.bold-font-weight;
+                radius: P.radius;
+                key-height: P.keyboard-key-height;
+                scaling-factor: P.scaling-factor;
+                close => {
+                    TextInputInterface.text-input-focused = false;
+                    dialog = DialogType.None;
+                }
             }
         }
     }
