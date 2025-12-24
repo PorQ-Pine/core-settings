@@ -1,0 +1,9 @@
+export enum Page { None, SettingsMenu, OOBE }
+export enum SettingsPage { None, StorageEncryptionOptions }
+export enum DialogType { None, EncryptionNewPassword, EncryptionConfirmPassword, EncryptionChangePassword, Toast }
+export struct SystemUser {
+    name: string,
+    encryption: bool,
+    encrypted-key: string,
+    salt: string,
+}

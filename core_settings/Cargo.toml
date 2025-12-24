@@ -1,0 +1,21 @@
+[package]
+name = "core_settings"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+env_logger = "0.11.8"
+log = "0.4.29"
+slint = { version = "1.14.1", default-features = false, features = ["compat-1-2", "backend-linuxkms-noseat", "libm", "log", "renderer-software"] }
+libqinit = { path = "../../quill_init/libqinit" }
+
+[build-dependencies]
+slint-build = { version = "1.14.1" }
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1

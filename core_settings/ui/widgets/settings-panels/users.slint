@@ -1,0 +1,232 @@
+import { Properties as P } from "../../../ui-common/properties.slint";
+import { DialogType, SystemUser } from "../../enumerations.slint";
+
+import { HLine } from "../../../ui-common/hline.slint";
+import { VLine } from "../../../ui-common/vline.slint";
+import { Switch } from "../../../ui-common/switch.slint";
+import { Button } from "../../../ui-common/button.slint";
+
+import { ScrollView } from "std-widgets.slint";
+
+export component Users inherits VerticalLayout {
+    in property <[string]> users;
+    in property <string> default-user;
+    in-out property <SystemUser> selected-user;
+    in-out property <DialogType> dialog;
+    callback get-selected-user-details(string);
+
+    HorizontalLayout {
+        spacing: P.layout-spacing;
+        if (users.length > 0): ScrollView {
+            mouse-drag-pan-enabled: true;
+            width: 35%;
+            VerticalLayout {
+                spacing: P.layout-spacing;
+                for username[index] in users: i-user-using-encryption-button := TouchArea {
+                    i-user-using-encryption-container := Rectangle {
+                        border-color: P.item-border-color;
+                        border-radius: P.radius;
+                        border-width: 3px;
+                        background: username == selected-user.name ? P.item-selected-color : #ffffff;
+                        HorizontalLayout {
+                            padding: 20px;
+                            spacing: P.layout-spacing * 1.5;
+                            VerticalLayout {
+                                alignment: center;
+                                Image {
+                                    source: @image-url("../../../icons/user.svg");
+                                    height: P.icon-button-height * 1.15;
+                                    width: self.height;
+                                    colorize: i-user-using-encryption-button.pressed ? #ffffff : #000000;
+                                }
+                            }
+
+                            i-user-using-encryption-text := Text {
+                                font-family: P.regular-font-family;
+                                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                                vertical-alignment: center;
+                                wrap: word-wrap;
+                                text: username;
+                            }
+
+                            VerticalLayout {
+                                alignment: center;
+                                Image {
+                                    source: @image-url("../../../icons/key.svg");
+                                    height: P.icon-button-height * 1.15;
+                                    width: self.height;
+                                    colorize: i-user-using-encryption-button.pressed ? #ffffff : #000000;
+                                }
+                            }
+                        }
+                    }
+
+                    states [
+                        pressed when self.pressed: {
+                            i-user-using-encryption-container.background: #000000;
+                            i-user-using-encryption-text.color: #ffffff;
+                        }
+                    ]
+
+                    clicked => {
+                        get-selected-user-details(username);
+                    }
+                }
+                Rectangle { }
+            }
+        }
+
+        if (users.length > 0): VLine {
+            thickness: 2px;
+        }
+
+        if (selected-user.name.is-empty): VerticalLayout {
+            alignment: center;
+            Text {
+                text: users.length == 0 ? "No users found" : "Select a user to manage its settings";
+                horizontal-alignment: center;
+                font-family: P.regular-font-family;
+                wrap: word-wrap;
+            }
+        }
+        if (!selected-user.name.is-empty): ScrollView {
+            mouse-drag-pan-enabled: true;
+            VerticalLayout {
+                spacing: P.layout-spacing / P.dialog-sizes-multiplier;
+                padding-top: self.spacing;
+                padding-bottom: self.spacing;
+                HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Encryption";
+                        vertical-alignment: center;
+                    }
+
+                    Switch {
+                        y: (parent.height - self.height) / 2;
+                        width: P.switch-width * P.dialog-sizes-multiplier;
+                        height: P.switch-height * P.dialog-sizes-multiplier;
+                        border-radius: P.radius;
+                        activated: selected-user.encryption;
+                        special-activation: true;
+                        toggled => {
+                            TextInputInterface.text-input-focused = true;
+                            if selected-user.encryption {
+                                dialog = DialogType.EncryptionConfirmPassword;
+                            } else {
+                                dialog = DialogType.EncryptionNewPassword;
+                            }
+                        }
+                    }
+                }
+
+                if (selected-user.encryption): HLine {
+                    thickness: 1px;
+                }
+
+                if (selected-user.encryption): HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Password";
+                        vertical-alignment: center;
+                    }
+
+                    Button {
+                        width: P.button-width * P.dialog-sizes-multiplier;
+                        height: P.button-height * P.dialog-sizes-multiplier;
+                        font-family: P.header-font-family;
+                        font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                        border-radius: P.radius;
+                        text: "Change";
+                        clicked => {
+                            TextInputInterface.text-input-focused = true;
+                            dialog = DialogType.EncryptionChangePassword;
+                        }
+                    }
+                }
+
+                if (selected-user.encryption): HLine {
+                    thickness: 1px;
+                }
+
+                if (selected-user.encryption): HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Key";
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        width: 50px;
+                    }
+
+                    Text {
+                        text: selected-user.encrypted-key;
+                        font-family: P.console-font-family;
+                        font-size: P.console-body-font-size;
+                        wrap: char-wrap;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                if (selected-user.encryption): HLine {
+                    thickness: 1px;
+                }
+
+                if (selected-user.encryption): HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Salt";
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        width: 50px;
+                    }
+
+                    Text {
+                        text: selected-user.salt;
+                        font-family: P.console-font-family;
+                        font-size: P.console-body-font-size;
+                        wrap: char-wrap;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                HLine {
+                    thickness: 1px;
+                }
+
+                HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Default user";
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        width: 50px;
+                    }
+
+                    Text {
+                        text: default-user == selected-user.name ? "Yes" : "No";
+                        font-family: P.console-font-family;
+                        font-size: P.console-body-font-size;
+                        wrap: char-wrap;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                Rectangle { }
+            }
+        }
+    }
+}

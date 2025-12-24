@@ -1,0 +1,133 @@
+import { Properties as P } from "../ui-common/properties.slint";
+import { Page, SettingsPage, DialogType, SystemUser } from "enumerations.slint";
+
+import { SettingsMenu } from "widgets/settings-menu.slint";
+import { IconButton } from "../ui-common/iconbutton.slint";
+import { HLine } from "../ui-common/hline.slint";
+
+import { ScrollView } from "std-widgets.slint";
+
+export component CoreSettings inherits Window {
+    // Properties
+    default-font-family <=> P.regular-font-family;
+    default-font-size <=> P.default-font-size;
+
+    in-out property <Page> page: Page.SettingsMenu;
+    in-out property <SettingsPage> settings-page;
+    in-out property <DialogType> dialog;
+    in-out property <SystemUser> selected-user;
+    in-out property <int> dialog-millis-count;
+    in property <string> dialog-message;
+    in property <bool> sticky-toast;
+
+    in-out property <string> section-header-title: core-settings-header;
+    in property <string> default-user;
+    in property <[string]> users;
+    in-out property <float> scaling-factor <=> P.scaling-factor;
+
+    // Constants
+    property <string> core-settings-header: "Core Settings";
+
+    // Callbacks
+    callback get-users();
+    callback get-selected-user-details(string);
+
+    // UI
+    ScrollView {
+        mouse-drag-pan-enabled: true;
+        if (page == Page.SettingsMenu): VerticalLayout {
+            padding <=> P.layout-padding;
+            spacing <=> P.layout-spacing;
+            HorizontalLayout {
+                if (settings-page == SettingsPage.None): Rectangle {
+                    height <=> P.icon-button-height;
+                    width: self.height;
+                }
+
+                if (settings-page != SettingsPage.None): IconButton {
+                    icon: @image-url("../icons/arrow-back.svg");
+                    border-radius <=> P.radius;
+                    height <=> P.icon-button-height;
+                    width: self.height;
+                    y: (parent.height - self.height) / 2;
+                    clicked => {
+                        settings-page = SettingsPage.None;
+                        section-header-title = core-settings-header;
+                    }
+                }
+
+                Rectangle { }
+
+                Text {
+                    text: section-header-title;
+                    horizontal-alignment: center;
+                    font-family <=> P.header-font-family;
+                    font-weight: 800;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Rectangle { }
+
+                Rectangle {
+                    height <=> P.icon-button-height;
+                    width: self.height;
+                }
+            }
+
+            if (page == Page.SettingsMenu): HLine {
+                top-padding-multiplier: 1;
+            }
+
+            settings-menu := SettingsMenu {
+                section-header-title <=> section-header-title;
+                settings-page <=> settings-page;
+                selected-user <=> selected-user;
+                dialog <=> dialog;
+                default-user <=> default-user;
+                users <=> users;
+
+                get-users => {
+                    get-users();
+                }
+
+                get-selected-user-details(string) => {
+                    get-selected-user-details(string);
+                }
+            }
+        }
+
+        TouchArea {
+            width: root.width;
+            height: root.height;
+            enabled: dialog != DialogType.None;
+            clicked => {
+                if !(dialog == DialogType.Toast && sticky-toast) {
+                    TextInputInterface.text-input-focused = false;
+                    dialog = DialogType.None;
+                }
+            }
+        }
+
+        if (dialog == DialogType.Toast): Rectangle {
+            width: 0.5 * root.width;
+            height: 0.07 * root.height;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-color: black;
+            border-width: P.dialog-rectangle-thickness;
+            border-radius: P.radius;
+            background: white;
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                enabled: true;
+            }
+
+            Text {
+                text: dialog-message;
+                font-family: P.header-font-family;
+                font-weight: P.bold-font-weight;
+            }
+        }
+    }
+}

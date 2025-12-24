@@ -1,0 +1,45 @@
+import { Properties as P } from "../../ui-common/properties.slint";
+import { SettingsPage, SystemUser, DialogType } from "../enumerations.slint";
+
+import { SectionButton } from "../../ui-common/sectionbutton.slint";
+import { Users as UsersSettings } from "../widgets/settings-panels/users.slint";
+
+export component SettingsMenu inherits VerticalLayout {
+    in property <string> default-user;
+    in property <[string]> users;
+
+    in-out property <SettingsPage> settings-page: SettingsPage.None;
+    in-out property <SystemUser> selected-user;
+    in-out property <string> section-header-title;
+    in-out property <DialogType> dialog;
+
+    callback get-users();
+    callback get-selected-user-details(string);
+
+    if (settings-page == SettingsPage.None): VerticalLayout {
+        SectionButton {
+            text: "Users & storage encryption";
+            height: P.section-button-height;
+            border-radius: P.radius;
+            font-family: P.header-font-family;
+            icon: @image-url("../../icons/key.svg");
+            clicked => {
+                get-users();
+                section-header-title = self.text;
+                selected-user.name = "";
+                settings-page = SettingsPage.StorageEncryptionOptions;
+            }
+        }
+    }
+
+    if (settings-page == SettingsPage.StorageEncryptionOptions): UsersSettings {
+        selected-user <=> selected-user;
+        dialog <=> dialog;
+        default-user <=> default-user;
+        users <=> users;
+
+        get-selected-user-details(string) => {
+            get-selected-user-details(string);
+        }
+    }
+}
