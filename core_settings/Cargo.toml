@@ -21,3 +21,7 @@ opt-level = "z"
 lto = true
 panic = "abort"
 codegen-units = 1
+
+[features]
+debug = ["libqinit/debug"]
+free_roam = ["libqinit/free_roam"]
