@@ -42,6 +42,7 @@ export component CoreSettings inherits Window {
     callback get-selected-user-details(string);
     callback change-user-password(string, string, string, bool);
     callback disable-storage-encryption(string, string);
+    callback quit();
 
     // UI
     ScrollView {
@@ -50,11 +51,16 @@ export component CoreSettings inherits Window {
             padding <=> P.layout-padding;
             spacing <=> P.layout-spacing;
             HorizontalLayout {
-                if (settings-page == SettingsPage.None): Rectangle {
+                if (settings-page == SettingsPage.None): IconButton {
+                    icon: @image-url("../icons/x.svg");
+                    border-radius <=> P.radius;
                     height <=> P.icon-button-height;
                     width: self.height;
+                    y: (parent.height - self.height) / 2;
+                    clicked => {
+                        quit();
+                    }
                 }
-
                 if (settings-page != SettingsPage.None): IconButton {
                     icon: @image-url("../icons/arrow-back.svg");
                     border-radius <=> P.radius;

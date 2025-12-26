@@ -57,7 +57,6 @@ pub fn change_user_password(
     pubkey: &PKey<Public>,
     timer: &Rc<Timer>,
 ) {
-    info!("{} {} {}", &user, &old_password, &new_password);
     let gui_weak = gui_weak.clone();
     let pubkey = pubkey.clone();
     timer.start(

@@ -1,4 +1,7 @@
-use std::rc::Rc;
+use std::{
+    process::exit,
+    rc::Rc,
+};
 
 use anyhow::{Context, Result};
 use log::info;
@@ -60,7 +63,7 @@ fn main() -> Result<()> {
                 new_password,
                 encrypted_storage_was_disabled,
                 &pubkey,
-                &encryption_change_password_timer
+                &encryption_change_password_timer,
             )
         }
     });
@@ -70,7 +73,13 @@ fn main() -> Result<()> {
         let gui_weak = gui_weak.clone();
         let pubkey = pubkey.clone();
         move |user, password| {
-            gui_fn::users::disable_storage_encryption(gui_weak.clone(), user, password, &pubkey, &encryption_disable_timer);
+            gui_fn::users::disable_storage_encryption(
+                gui_weak.clone(),
+                user,
+                password,
+                &pubkey,
+                &encryption_disable_timer,
+            );
         }
     });
 
@@ -84,6 +93,13 @@ fn main() -> Result<()> {
                 gui.window()
                     .dispatch_event(slint::platform::WindowEvent::KeyReleased { text: key });
             }
+        }
+    });
+
+    gui.on_quit({
+        move || {
+            info!("Exiting");
+            exit(0)
         }
     });
 
