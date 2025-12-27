@@ -5,6 +5,7 @@ import { HLine } from "../../../../ui-common/hline.slint";
 import { VLine } from "../../../../ui-common/vline.slint";
 import { Switch } from "../../../../ui-common/switch.slint";
 import { Button } from "../../../../ui-common/button.slint";
+import { MinorButton } from "../../../../ui-common/minorbutton.slint";
 
 import { ScrollView } from "std-widgets.slint";
 
@@ -22,8 +23,8 @@ export component Users inherits VerticalLayout {
             width: 35%;
             VerticalLayout {
                 spacing: P.layout-spacing;
-                for username[index] in users: i-user-using-encryption-button := TouchArea {
-                    i-user-using-encryption-container := Rectangle {
+                for username[index] in users: i-user-button := TouchArea {
+                    i-user-container := Rectangle {
                         border-color: P.item-border-color;
                         border-radius: P.radius;
                         border-width: 3px;
@@ -37,11 +38,11 @@ export component Users inherits VerticalLayout {
                                     source: @image-url("../../../../icons/user.svg");
                                     height: P.icon-button-height * 1.15;
                                     width: self.height;
-                                    colorize: i-user-using-encryption-button.pressed ? #ffffff : #000000;
+                                    colorize: i-user-button.pressed ? #ffffff : #000000;
                                 }
                             }
 
-                            i-user-using-encryption-text := Text {
+                            i-user-text := Text {
                                 font-family: P.regular-font-family;
                                 font-size: P.default-font-size * P.dialog-sizes-multiplier;
                                 vertical-alignment: center;
@@ -55,7 +56,7 @@ export component Users inherits VerticalLayout {
                                     source: @image-url("../../../../icons/key.svg");
                                     height: P.icon-button-height * 1.15;
                                     width: self.height;
-                                    colorize: i-user-using-encryption-button.pressed ? #ffffff : #000000;
+                                    colorize: i-user-button.pressed ? #ffffff : #000000;
                                 }
                             }
                         }
@@ -63,8 +64,8 @@ export component Users inherits VerticalLayout {
 
                     states [
                         pressed when self.pressed: {
-                            i-user-using-encryption-container.background: #000000;
-                            i-user-using-encryption-text.color: #ffffff;
+                            i-user-container.background: #000000;
+                            i-user-text.color: #ffffff;
                         }
                     ]
 
@@ -73,6 +74,20 @@ export component Users inherits VerticalLayout {
                     }
                 }
                 Rectangle { }
+                HLine {
+                    thickness: 1px;
+                }
+                MinorButton {
+                    text: "New user";
+                    horizontal-text-alignment: left;
+                    font-family: P.header-font-family;
+                    font-size: P.header-font-size * 0.45;
+                    font-weight: P.bold-font-weight;
+                    layout-padding: 25px;
+                    height: 80px;
+                    show-icon: true;
+                    icon: @image-url("../../../../icons/plus.svg");
+                }
             }
         }
 

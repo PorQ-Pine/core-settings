@@ -29,7 +29,11 @@ export component UserDialogs inherits Rectangle {
         enabled: true;
     }
 
-    VerticalLayout {
+    if (dialog == DialogType.NewUser): VerticalLayout {
+
+    }
+
+    if (dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionConfirmPassword || dialog == DialogType.EncryptionNewPassword): VerticalLayout {
         padding: P.layout-padding;
         HorizontalLayout {
             IconButton {
