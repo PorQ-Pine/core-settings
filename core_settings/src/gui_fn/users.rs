@@ -1,6 +1,5 @@
 use std::rc::Rc;
 use libqinit::storage_encryption::DISABLED_MODE_PASSWORD;
-use log::info;
 
 use libqinit::{rootfs, storage_encryption};
 
