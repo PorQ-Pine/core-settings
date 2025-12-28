@@ -6,6 +6,7 @@ use std::{
 use anyhow::{Context, Result};
 use log::info;
 use slint::{Timer, TimerMode};
+use libqinit::boot_config::BootConfig;
 slint::include_modules!();
 
 mod gui_fn;
@@ -16,6 +17,12 @@ fn main() -> Result<()> {
 
     let pubkey = libqinit::signing::read_public_key()?;
 
+    // Boot configuration
+    // We ignore boot configuration validity checks, since issues related
+    // to the former should already have been handled by qinit beforehand.
+    let (mut boot_config, _) = BootConfig::read()?;
+
+    // GUI
     let gui = CoreSettings::new().with_context(|| "Failed to initialize Slint UI")?;
     let gui_weak = gui.as_weak();
 
@@ -33,6 +40,12 @@ fn main() -> Result<()> {
         },
     );
 
+    // OOBE
+    if !boot_config.flags.first_boot_done {
+        gui.set_page(Page::OOBE);
+    }
+
+    // Control panels
     gui.on_get_users({
         let gui_weak = gui_weak.clone();
         move || {

@@ -2,6 +2,7 @@ import { Properties as P } from "../ui-common/properties.slint";
 import { Page, SettingsPage, DialogType, SystemUser } from "enumerations.slint";
 
 import { SettingsMenu } from "widgets/settings-menu.slint";
+import { OOBE } from "widgets/oobe.slint";
 import { IconButton } from "../ui-common/iconbutton.slint";
 import { HLine } from "../ui-common/hline.slint";
 import { Toast } from "../ui-common/toast.slint";
@@ -22,7 +23,7 @@ export component CoreSettings inherits Window {
     default-font-size <=> P.default-font-size;
     background: #ffffff;
 
-    in-out property <Page> page: Page.SettingsMenu;
+    in-out property <Page> page: Page.None;
     in-out property <SettingsPage> settings-page;
     in-out property <DialogType> dialog;
     in-out property <SystemUser> selected-user;
@@ -112,6 +113,10 @@ export component CoreSettings inherits Window {
                     get-selected-user-details(user);
                 }
             }
+        }
+
+        if (page == Page.OOBE): OOBE {
+
         }
 
         TouchArea {
