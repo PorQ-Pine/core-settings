@@ -1,7 +1,7 @@
 use crate::{CoreSettings, DialogType};
 use slint::SharedString;
 
-use log::{info, error};
+use log::{error, info};
 
 pub mod users;
 

@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use libqinit::storage_encryption::DISABLED_MODE_PASSWORD;
+use std::rc::Rc;
 
 use libqinit::{rootfs, storage_encryption};
 
@@ -102,14 +102,19 @@ pub fn disable_storage_encryption(
         std::time::Duration::from_millis(100),
         move || {
             if let Some(gui) = gui_weak.upgrade() {
-                if let Err(e) =
-                    rootfs::change_user_password(&pubkey, &user, &password.to_string(), &DISABLED_MODE_PASSWORD)
-                {
+                if let Err(e) = rootfs::change_user_password(
+                    &pubkey,
+                    &user,
+                    &password.to_string(),
+                    &DISABLED_MODE_PASSWORD,
+                ) {
                     error_toast(&gui, "Failed to change user password", e.into());
                 }
 
-                if let Err(e) = libcoresettings::users::disable_encryption(&user.to_string(), &password.to_string())
-                {
+                if let Err(e) = libcoresettings::users::disable_encryption(
+                    &user.to_string(),
+                    &password.to_string(),
+                ) {
                     error_toast(&gui, "Failed to disable encryption", e.into());
                 } else {
                     toast(&gui, "Encryption successfully disabled");

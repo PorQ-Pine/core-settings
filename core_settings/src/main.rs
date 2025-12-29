@@ -1,12 +1,9 @@
-use std::{
-    process::exit,
-    rc::Rc,
-};
+use std::{process::exit, rc::Rc};
 
 use anyhow::{Context, Result};
+use libqinit::boot_config::BootConfig;
 use log::info;
 use slint::{Timer, TimerMode};
-use libqinit::boot_config::BootConfig;
 slint::include_modules!();
 
 mod gui_fn;
