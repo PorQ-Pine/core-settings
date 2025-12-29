@@ -1,0 +1,127 @@
+import { Properties as P } from "../../../ui-common/properties.slint";
+import { HLine } from "../../../ui-common/hline.slint";
+import { LineEdit } from "../../../ui-common/lineedit.slint";
+import { MinorButton } from "../../../ui-common/minorbutton.slint";
+import { DialogType } from "../../enumerations.slint";
+
+export component UserCreation inherits VerticalLayout {
+    callback create-user(string, string, bool);
+
+    in-out property <DialogType> dialog;
+    in-out property <string> dialog-message;
+
+    alignment: center;
+    VerticalLayout {
+        padding-left: P.layout-padding * 9;
+        padding-right: self.padding-left;
+        Text {
+            text: "Set up an administrator user";
+            font-family: P.serif-font-family;
+            font-size: P.header-font-size * 1.1;
+            horizontal-alignment: center;
+            font-weight: 700;
+            wrap: word-wrap;
+        }
+    }
+
+    HLine {
+        padding-left: P.layout-padding * 8;
+        padding-right: self.padding-left;
+    }
+
+    VerticalLayout {
+        padding-left: P.layout-padding * 8;
+        padding-right: self.padding-left;
+        Text {
+            text: "The administrator user can add and delete other users. It can also execute actions requiring root privileges throughout the system.";
+            wrap: word-wrap;
+            font-family: P.serif-font-family;
+            font-size: P.default-font-size * 1.1;
+            horizontal-alignment: center;
+            font-weight: 500;
+            font-italic: true;
+        }
+    }
+
+    Rectangle {
+        height: P.layout-spacing * 10;
+    }
+
+    VerticalLayout {
+        spacing: P.layout-spacing;
+        HorizontalLayout {
+            alignment: center;
+            username-edit := LineEdit {
+                default-height: P.rheight * 0.05;
+                width: P.rwidth * 0.4;
+                border-radius: P.radius;
+                placeholder-text: "Username";
+                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            password-edit := LineEdit {
+                default-height: P.rheight * 0.05;
+                width: P.rwidth * 0.4;
+                border-radius: P.radius;
+                placeholder-text: "Password";
+                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                input-type: password;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            confirm-password-edit := LineEdit {
+                default-height: P.rheight * 0.05;
+                width: P.rwidth * 0.4;
+                border-radius: P.radius;
+                placeholder-text: "Confirm password";
+                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                input-type: password;
+            }
+        }
+    }
+
+    Rectangle {
+        height: P.layout-spacing * 10;
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        MinorButton {
+            text: "Start using Quill OS";
+            horizontal-text-alignment: left;
+            font-family: P.header-font-family;
+            font-size: P.header-font-size * 0.7;
+            font-weight: P.bold-font-weight;
+            layout-padding: 25px;
+            width: P.rwidth * 0.48;
+            height: P.rheight * 0.06;
+            show-icon: true;
+            invert-colorization: true;
+            border-width: 4px;
+            icon: @image-url("../../../icons/arrow-forward-700.svg");
+            clicked => {
+                if username-edit.text.is-empty {
+                    dialog-message = "Please enter a username";
+                    dialog = DialogType.Toast;
+                } else if password-edit.text != confirm-password-edit.text {
+                    dialog-message = "Passwords do not match";
+                    dialog = DialogType.Toast;
+                } else if password-edit.text.is-empty && confirm-password-edit.text.is-empty {
+                    dialog-message = "Please enter a password";
+                    dialog = DialogType.Toast;
+                } else {
+                    create-user(username-edit.text, password-edit.text, true);
+                }
+            }
+        }
+    }
+
+    if (TextInputInterface.text-input-focused): Rectangle {
+        height: P.rheight * 0.25;
+    }
+}

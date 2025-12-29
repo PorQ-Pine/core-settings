@@ -59,3 +59,7 @@ pub fn disable_encryption(user: &str, password: &str) -> Result<()> {
 
     Ok(())
 }
+
+pub fn create(user: &str, password: &str, admin: bool) -> Result<()> {
+    Ok(())
+}

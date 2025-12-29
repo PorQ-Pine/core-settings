@@ -125,6 +125,10 @@ pub fn disable_storage_encryption(
     );
 }
 
+pub fn create(gui_weak: Weak<CoreSettings>, username:SharedString, password: SharedString, admin: bool) {
+
+}
+
 fn refresh_users_ui(gui: &CoreSettings) {
     gui.invoke_get_users();
     gui.invoke_get_selected_user_details(gui.get_selected_user().name);

@@ -26,9 +26,9 @@ export component CoreSettings inherits Window {
     in-out property <Page> page: Page.None;
     in-out property <SettingsPage> settings-page;
     in-out property <DialogType> dialog;
+    in-out property <string> dialog-message;
     in-out property <SystemUser> selected-user;
     in-out property <int> dialog-millis-count;
-    in-out property <string> dialog-message;
     in-out property <bool> sticky-toast;
 
     in-out property <string> section-header-title: core-settings-header;
@@ -44,6 +44,7 @@ export component CoreSettings inherits Window {
     callback get-selected-user-details(string);
     callback change-user-password(string, string, string, bool);
     callback disable-storage-encryption(string, string);
+    callback create-user(string, string, bool);
     callback quit();
 
     // UI
@@ -116,7 +117,11 @@ export component CoreSettings inherits Window {
         }
 
         if (page == Page.OOBE): OOBE {
-
+            dialog <=> dialog;
+            dialog-message <=> dialog-message;
+            create-user(username, password, admin) => {
+                create-user(username, password, admin);
+            }
         }
 
         TouchArea {

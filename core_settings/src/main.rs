@@ -93,6 +93,13 @@ fn main() -> Result<()> {
         }
     });
 
+    gui.on_create_user({
+        let gui_weak = gui_weak.clone();
+        move |username, password, admin| {
+            gui_fn::users::create(gui_weak.clone(), username, password, admin);
+        }
+    });
+
     // Virtual keyboard
     gui.global::<VirtualKeyboardHandler>().on_key_pressed({
         let gui_weak = gui_weak.clone();
