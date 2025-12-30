@@ -1,12 +1,13 @@
 import { Properties as P } from "../../ui-common/properties.slint";
-import { OOBEPage } from "../enumerations.slint";
+import { OOBEPage, Page } from "../enumerations.slint";
 import { Welcome } from "oobe/welcome.slint";
 import { UserCreation } from "oobe/user-creation.slint";
 import { DialogType } from "../enumerations.slint";
 
 export component OOBE inherits VerticalLayout {
-    callback create-user(string, string, bool, bool);
+    callback create-user(string, string, bool, bool, bool);
 
+    in-out property <Page> global-page;
     in-out property <OOBEPage> page: OOBEPage.Welcome;
     in-out property <DialogType> dialog;
     in-out property <string> dialog-message;
@@ -18,8 +19,9 @@ export component OOBE inherits VerticalLayout {
     if (page == OOBEPage.UserCreation): UserCreation {
         dialog <=> dialog;
         dialog-message <=> dialog-message;
-        create-user(username, password, admin, quit-afterwards) => {
-            create-user(username, password, admin, quit-afterwards);
+        global-page <=> global-page;
+        create-user(username, password, admin, quit-afterwards, make-default) => {
+            create-user(username, password, admin, quit-afterwards, make-default);
         }
     }
 }

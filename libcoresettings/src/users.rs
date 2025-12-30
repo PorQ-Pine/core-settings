@@ -1,7 +1,10 @@
 use anyhow::{Context, Result};
-use libqinit::storage_encryption::GOCRYPTFS_BINARY;
+use libqinit::{boot_config::BootConfig, storage_encryption::GOCRYPTFS_BINARY};
 use log::{error, info};
-use std::fs;
+use std::{
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use libqinit::{OVERLAY_MOUNTPOINT, SYSTEM_HOME_DIR, rootfs, storage_encryption, system};
 use openssl::pkey::PKey;
@@ -225,7 +228,20 @@ fn initialize_encrypted_storage(path: &str, password: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn create(username: &str, password: &str, admin: bool) -> Result<()> {
+pub fn set_default_user(user: &str, boot_config: Arc<Mutex<BootConfig>>) -> Result<()> {
+    info!("Setting default user to '{}'", &user);
+    boot_config.lock().unwrap().system.default_user = Some(user.to_string());
+
+    Ok(())
+}
+
+pub fn create(
+    username: &str,
+    password: &str,
+    admin: bool,
+    make_default: bool,
+    boot_config: Option<Arc<Mutex<BootConfig>>>,
+) -> Result<()> {
     create_user_chroot_command(&OVERLAY_MOUNTPOINT, &username, admin)?;
     change_user_password_chroot_command(&OVERLAY_MOUNTPOINT, &username, None, &password, false)?;
 
@@ -256,6 +272,12 @@ pub fn create(username: &str, password: &str, admin: bool) -> Result<()> {
     ])?;
 
     storage_encryption::unmount_storage(&username)?;
+
+    if make_default && let Some(boot_config) = boot_config {
+        set_default_user(&username, boot_config)?;
+    } else {
+        return Err(anyhow::anyhow!("Failed to set default user"));
+    }
 
     Ok(())
 }

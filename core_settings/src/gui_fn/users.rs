@@ -1,7 +1,12 @@
-use libqinit::storage_encryption::DISABLED_MODE_PASSWORD;
-use std::{rc::Rc, sync::mpsc::Sender};
+use std::{
+    rc::Rc,
+    sync::{Arc, Mutex, mpsc::Sender},
+};
 
-use libqinit::storage_encryption;
+use libqinit::{
+    boot_config::BootConfig,
+    storage_encryption::{self, DISABLED_MODE_PASSWORD},
+};
 
 use crate::gui_fn::{error_toast, toast};
 use crate::{CoreSettings, SettingsPage, SystemUser};
@@ -133,20 +138,31 @@ pub fn create(
     username: SharedString,
     password: SharedString,
     admin: bool,
+    make_default: bool,
     timer: &Rc<Timer>,
     quit_sender: Sender<()>,
     quit_afterwards: bool,
+    boot_config: Option<Arc<Mutex<BootConfig>>>,
 ) {
     let gui_weak = gui_weak.clone();
     timer.start(
         TimerMode::SingleShot,
         std::time::Duration::from_millis(100),
-        move || {
-            if let Some(gui) = gui_weak.upgrade() {
-                if let Err(e) = libcoresettings::users::create(&username, &password, admin) {
-                    error_toast(&gui, "Failed to create user", e.into());
-                } else if quit_afterwards {
-                    let _ = quit_sender.send(());
+        {
+            let boot_config = boot_config.clone();
+            move || {
+                if let Some(gui) = gui_weak.upgrade() {
+                    if let Err(e) = libcoresettings::users::create(
+                        &username,
+                        &password,
+                        admin,
+                        make_default,
+                        boot_config.clone(),
+                    ) {
+                        error_toast(&gui, "Failed to create user", e.into());
+                    } else if quit_afterwards {
+                        let _ = quit_sender.send(());
+                    }
                 }
             }
         },
