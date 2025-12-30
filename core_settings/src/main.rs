@@ -1,4 +1,8 @@
-use std::{process::exit, rc::Rc};
+use std::{
+    process::exit,
+    rc::Rc,
+    sync::mpsc::{Receiver, Sender, channel},
+};
 
 use anyhow::{Context, Result};
 use libqinit::boot_config::BootConfig;
@@ -17,11 +21,14 @@ fn main() -> Result<()> {
     // Boot configuration
     // We ignore boot configuration validity checks, since issues related
     // to the former should already have been handled by qinit beforehand.
-    let (mut boot_config, _) = BootConfig::read()?;
+    let (original_boot_config, _) = BootConfig::read()?;
+    info!("Original boot configuration: {:?}", &original_boot_config);
+    let mut boot_config = original_boot_config.clone();
 
     // GUI
     let gui = CoreSettings::new().with_context(|| "Failed to initialize Slint UI")?;
     let gui_weak = gui.as_weak();
+    let (quit_sender, quit_receiver): (Sender<()>, Receiver<()>) = channel();
 
     let toast_gc_timer = Timer::default();
     toast_gc_timer.start(
@@ -40,6 +47,8 @@ fn main() -> Result<()> {
     // OOBE
     if !boot_config.flags.first_boot_done {
         gui.set_page(Page::OOBE);
+    } else {
+        gui.set_page(Page::SettingsMenu);
     }
 
     // Control panels
@@ -93,12 +102,40 @@ fn main() -> Result<()> {
         }
     });
 
+    let create_user_timer = Rc::new(Timer::default());
     gui.on_create_user({
+        let quit_sender = quit_sender.clone();
         let gui_weak = gui_weak.clone();
-        move |username, password, admin| {
-            gui_fn::users::create(gui_weak.clone(), username, password, admin);
+        move |username, password, admin, quit_afterwards| {
+            gui_fn::users::create(
+                gui_weak.clone(),
+                username,
+                password,
+                admin,
+                &create_user_timer,
+                quit_sender.clone(),
+                quit_afterwards,
+            );
         }
     });
+
+    let quit_timer = Rc::new(Timer::default());
+    quit_timer.start(
+        TimerMode::Repeated,
+        std::time::Duration::from_millis(100),
+        {
+            let gui_weak = gui_weak.clone();
+            move || {
+                if let Ok(()) = quit_receiver.try_recv() {
+                    if let Err(e) = quit(&original_boot_config, &mut boot_config) {
+                        if let Some(gui) = gui_weak.upgrade() {
+                            gui_fn::error_toast(&gui, "Failed to quit", e.into());
+                        }
+                    }
+                }
+            }
+        },
+    );
 
     // Virtual keyboard
     gui.global::<VirtualKeyboardHandler>().on_key_pressed({
@@ -114,13 +151,26 @@ fn main() -> Result<()> {
     });
 
     gui.on_quit({
+        let quit_sender = quit_sender.clone();
         move || {
-            info!("Exiting");
-            exit(0)
+            let _ = quit_sender.send(());
         }
     });
 
     gui.run()?;
 
     Ok(())
+}
+
+fn quit(original_boot_config: &BootConfig, boot_config: &mut BootConfig) -> Result<()> {
+    info!("Exiting");
+
+    boot_config.flags.first_boot_done = true;
+    if *boot_config != *original_boot_config {
+        BootConfig::write(boot_config, false)?;
+    } else {
+        info!("Boot configuration did not change: not writing it back");
+    }
+
+    exit(0);
 }

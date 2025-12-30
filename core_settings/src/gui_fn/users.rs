@@ -1,7 +1,7 @@
 use libqinit::storage_encryption::DISABLED_MODE_PASSWORD;
-use std::rc::Rc;
+use std::{rc::Rc, sync::mpsc::Sender};
 
-use libqinit::{rootfs, storage_encryption};
+use libqinit::storage_encryption;
 
 use crate::gui_fn::{error_toast, toast};
 use crate::{CoreSettings, SettingsPage, SystemUser};
@@ -67,12 +67,15 @@ pub fn change_user_password(
                     old_password = SharedString::from(storage_encryption::DISABLED_MODE_PASSWORD);
                 }
 
-                if let Err(e) =
-                    rootfs::change_user_password(&pubkey, &user, &old_password, &new_password)
-                {
+                if let Err(e) = libcoresettings::users::change_user_password(
+                    &pubkey,
+                    &user,
+                    &old_password,
+                    &new_password,
+                ) {
                     error_toast(&gui, "Failed to change user password", e.into());
                 } else {
-                    if let Err(e) = libcoresettings::users::change_password(
+                    if let Err(e) = libcoresettings::users::change_encryption_password(
                         &user.to_string(),
                         &old_password.to_string(),
                         &new_password.to_string(),
@@ -102,7 +105,7 @@ pub fn disable_storage_encryption(
         std::time::Duration::from_millis(100),
         move || {
             if let Some(gui) = gui_weak.upgrade() {
-                if let Err(e) = rootfs::change_user_password(
+                if let Err(e) = libcoresettings::users::change_user_password(
                     &pubkey,
                     &user,
                     &password.to_string(),
@@ -125,8 +128,29 @@ pub fn disable_storage_encryption(
     );
 }
 
-pub fn create(gui_weak: Weak<CoreSettings>, username:SharedString, password: SharedString, admin: bool) {
-
+pub fn create(
+    gui_weak: Weak<CoreSettings>,
+    username: SharedString,
+    password: SharedString,
+    admin: bool,
+    timer: &Rc<Timer>,
+    quit_sender: Sender<()>,
+    quit_afterwards: bool,
+) {
+    let gui_weak = gui_weak.clone();
+    timer.start(
+        TimerMode::SingleShot,
+        std::time::Duration::from_millis(100),
+        move || {
+            if let Some(gui) = gui_weak.upgrade() {
+                if let Err(e) = libcoresettings::users::create(&username, &password, admin) {
+                    error_toast(&gui, "Failed to create user", e.into());
+                } else if quit_afterwards {
+                    let _ = quit_sender.send(());
+                }
+            }
+        },
+    )
 }
 
 fn refresh_users_ui(gui: &CoreSettings) {

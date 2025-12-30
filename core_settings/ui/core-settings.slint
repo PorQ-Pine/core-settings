@@ -44,7 +44,7 @@ export component CoreSettings inherits Window {
     callback get-selected-user-details(string);
     callback change-user-password(string, string, string, bool);
     callback disable-storage-encryption(string, string);
-    callback create-user(string, string, bool);
+    callback create-user(string, string, bool, bool);
     callback quit();
 
     // UI
@@ -119,8 +119,8 @@ export component CoreSettings inherits Window {
         if (page == Page.OOBE): OOBE {
             dialog <=> dialog;
             dialog-message <=> dialog-message;
-            create-user(username, password, admin) => {
-                create-user(username, password, admin);
+            create-user(username, password, admin, quit-afterwards) => {
+                create-user(username, password, admin, quit-afterwards);
             }
         }
 

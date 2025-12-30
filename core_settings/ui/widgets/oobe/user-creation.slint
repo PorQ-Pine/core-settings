@@ -5,7 +5,7 @@ import { MinorButton } from "../../../ui-common/minorbutton.slint";
 import { DialogType } from "../../enumerations.slint";
 
 export component UserCreation inherits VerticalLayout {
-    callback create-user(string, string, bool);
+    callback create-user(string, string, bool, bool);
 
     in-out property <DialogType> dialog;
     in-out property <string> dialog-message;
@@ -92,13 +92,13 @@ export component UserCreation inherits VerticalLayout {
     HorizontalLayout {
         alignment: center;
         MinorButton {
-            text: "Start using Quill OS";
+            text: "Complete setup";
             horizontal-text-alignment: left;
             font-family: P.header-font-family;
-            font-size: P.header-font-size * 0.7;
+            font-size: P.header-font-size * 0.6;
             font-weight: P.bold-font-weight;
             layout-padding: 25px;
-            width: P.rwidth * 0.48;
+            width: P.rwidth * 0.4;
             height: P.rheight * 0.06;
             show-icon: true;
             invert-colorization: true;
@@ -115,7 +115,9 @@ export component UserCreation inherits VerticalLayout {
                     dialog-message = "Please enter a password";
                     dialog = DialogType.Toast;
                 } else {
-                    create-user(username-edit.text, password-edit.text, true);
+                    dialog-message = "Creating user, please wait";
+                    dialog = DialogType.Toast;
+                    create-user(username-edit.text, password-edit.text, true, true);
                 }
             }
         }
