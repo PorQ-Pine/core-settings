@@ -118,7 +118,7 @@ export component UserCreation inherits VerticalLayout {
                 } else {
                     TextInputInterface.text-input-focused = false;
                     global-page = Page.None;
-                    dialog-message = "Creating user, please wait";
+                    dialog-message = "Creating user";
                     dialog = DialogType.Toast;
                     create-user(username-edit.text, password-edit.text, true, true, true);
                 }

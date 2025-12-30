@@ -12,6 +12,7 @@ export component SettingsMenu inherits VerticalLayout {
     in-out property <SystemUser> selected-user;
     in-out property <string> section-header-title;
     in-out property <DialogType> dialog;
+    in-out property <bool> admin-lock;
 
     callback get-users();
     callback get-selected-user-details(string);
@@ -38,6 +39,7 @@ export component SettingsMenu inherits VerticalLayout {
         dialog <=> dialog;
         default-user <=> default-user;
         users <=> users;
+        admin-lock <=> admin-lock;
 
         get-selected-user-details(string) => {
             get-selected-user-details(string);

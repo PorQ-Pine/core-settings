@@ -30,6 +30,8 @@ export component CoreSettings inherits Window {
     in-out property <SystemUser> selected-user;
     in-out property <int> dialog-millis-count;
     in-out property <bool> sticky-toast;
+    in-out property <bool> admin-lock: true;
+    in-out property <image> lock-button-icon: admin-lock ? @image-url("../icons/lock.svg") : @image-url("../icons/lock-open.svg");
 
     in-out property <string> section-header-title: core-settings-header;
     in property <string> default-user;
@@ -45,6 +47,7 @@ export component CoreSettings inherits Window {
     callback change-user-password(string, string, string, bool);
     callback disable-storage-encryption(string, string);
     callback create-user(string, string, bool, bool, bool);
+    callback admin-login-verify(string, string);
     callback quit();
 
     // UI
@@ -88,9 +91,25 @@ export component CoreSettings inherits Window {
 
                 Rectangle { }
 
-                Rectangle {
+                if (settings-page != SettingsPage.StorageEncryptionOptions): Rectangle {
                     height <=> P.icon-button-height;
                     width: self.height;
+                }
+
+                if (settings-page == SettingsPage.StorageEncryptionOptions): IconButton {
+                    icon: lock-button-icon;
+                    border-radius <=> P.radius;
+                    height <=> P.icon-button-height;
+                    width: self.height;
+                    y: (parent.height - self.height) / 2;
+                    clicked => {
+                        if admin-lock {
+                            TextInputInterface.text-input-focused = true;
+                            dialog = DialogType.AdminLogin;
+                        } else {
+                            admin-lock = !admin-lock;
+                        }
+                    }
                 }
             }
 
@@ -105,6 +124,7 @@ export component CoreSettings inherits Window {
                 dialog <=> dialog;
                 default-user <=> default-user;
                 users <=> users;
+                admin-lock <=> admin-lock;
 
                 get-users => {
                     get-users();
@@ -159,6 +179,10 @@ export component CoreSettings inherits Window {
 
             create-user(username, password, admin, quit-afterwards, make-default) => {
                 create-user(username, password, admin, quit-afterwards, make-default);
+            }
+
+            admin-login-verify(username, password) => {
+                admin-login-verify(username, password);
             }
         }
     }

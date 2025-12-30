@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use libqinit::{boot_config::BootConfig, storage_encryption::GOCRYPTFS_BINARY};
+use libqinit::{
+    boot_config::BootConfig, rootfs::run_chroot_command, storage_encryption::GOCRYPTFS_BINARY,
+};
 use log::{error, info};
 use std::{
     fs,
@@ -11,6 +13,12 @@ use openssl::pkey::PKey;
 use openssl::pkey::Public;
 
 const ADMIN_GROUP: &str = "wheel";
+
+pub enum AdminLoginStatus {
+    Success,
+    Failure,
+    NotAdmin,
+}
 
 pub fn change_encryption_password(
     user: &str,
@@ -152,10 +160,10 @@ fn create_user_chroot_command(chroot_path: &str, username: &str, admin: bool) ->
 }
 
 pub fn change_user_password(
-    pubkey: &PKey<Public>,
+    pubkey: Option<&PKey<Public>>,
     user: &str,
     old_password: &str,
-    new_password: &str,
+    new_password: Option<&str>,
 ) -> Result<()> {
     info!(
         "Attempting to change system user password for user '{}'",
@@ -164,10 +172,31 @@ pub fn change_user_password(
 
     let handle_rootfs;
     if !system::is_mountpoint(&OVERLAY_MOUNTPOINT)? {
-        rootfs::setup(&pubkey, true)?;
+        if let Some(pubkey) = pubkey {
+            rootfs::setup(&pubkey, true)?;
+        } else {
+            return Err(anyhow::anyhow!("Cannot extract public key"));
+        }
         handle_rootfs = true;
     } else {
         handle_rootfs = false;
+    }
+
+    let mut shadow_backup: Option<String> = None;
+    let mut shadow_file_path: Option<String> = None;
+    let new_password_string;
+
+    if let Some(password) = new_password {
+        new_password_string = password;
+    } else {
+        shadow_file_path = Some(format!("{}/etc/shadow", &OVERLAY_MOUNTPOINT));
+        if let Some(path) = shadow_file_path.clone() {
+            shadow_backup = Some(
+                fs::read_to_string(&path)
+                    .with_context(|| "Failed to backup shadow file from overlay filesystem")?,
+            );
+        }
+        new_password_string = old_password;
     }
 
     let temporary_password = system::generate_random_string(128)?;
@@ -190,11 +219,18 @@ pub fn change_user_password(
             &OVERLAY_MOUNTPOINT,
             &user,
             Some(&temporary_password),
-            &new_password,
+            &new_password_string,
             false,
         ) {
             do_error = true;
             error!("{}", &e);
+        }
+    }
+
+    if let Some(backup) = shadow_backup {
+        if let Some(path) = shadow_file_path {
+            fs::write(&path, &backup)
+                .with_context(|| "Failed to write shadow file backup to overlay filesystem")?;
         }
     }
 
@@ -235,6 +271,33 @@ pub fn set_default_user(user: &str, boot_config: Arc<Mutex<BootConfig>>) -> Resu
     Ok(())
 }
 
+pub fn is_admin(user: &str) -> bool {
+    if let Err(_) = run_chroot_command(&[
+        "/bin/sh",
+        "-c",
+        &format!(
+            "/usr/sbin/groups '{}' | /usr/sbin/grep -q '{}'",
+            &user, &ADMIN_GROUP
+        ),
+    ]) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+pub fn admin_login_verify(username: &str, password: &str) -> AdminLoginStatus {
+    if let Err(_) = change_user_password(None, &username, &password, None) {
+        return AdminLoginStatus::Failure;
+    }
+
+    if is_admin(&username) {
+        return AdminLoginStatus::Success;
+    } else {
+        return AdminLoginStatus::NotAdmin;
+    }
+}
+
 pub fn create(
     username: &str,
     password: &str,
@@ -242,8 +305,10 @@ pub fn create(
     make_default: bool,
     boot_config: Arc<Mutex<BootConfig>>,
 ) -> Result<()> {
-    create_user_chroot_command(&OVERLAY_MOUNTPOINT, &username, admin)?;
-    change_user_password_chroot_command(&OVERLAY_MOUNTPOINT, &username, None, &password, false)?;
+    create_user_chroot_command(&OVERLAY_MOUNTPOINT, &username, admin)
+        .with_context(|| "Failed to create UNIX user in chroot")?;
+    change_user_password_chroot_command(&OVERLAY_MOUNTPOINT, &username, None, &password, false)
+        .with_context(|| "Failed to set new UNIX user's password")?;
 
     let home_dir_path = format!("{}/{}/{}", &OVERLAY_MOUNTPOINT, &SYSTEM_HOME_DIR, &username);
     let encrypted_home_dir_path = format!(
@@ -263,15 +328,18 @@ pub fn create(
             "/bin/cp -r /etc/skel/.* /{}/{}",
             &SYSTEM_HOME_DIR, &username
         ),
-    ])?;
+    ])
+    .with_context(|| "Failed to copy skeleton directory file(s) to new user's home directory")?;
     rootfs::run_chroot_command(&[
         "/usr/sbin/chown",
         "-R",
         &format!("{}:{}", &username, &username),
         &format!("/{}/{}", &SYSTEM_HOME_DIR, &username),
-    ])?;
+    ])
+    .with_context(|| "Failed to set filesystem permissions")?;
 
-    storage_encryption::unmount_storage(&username)?;
+    storage_encryption::unmount_storage(&username)
+        .with_context(|| "Failed to unmount encrypted storage")?;
 
     if make_default {
         set_default_user(&username, boot_config).with_context(|| "Failed to set default user")?

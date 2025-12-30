@@ -10,7 +10,7 @@ use std::{
 use anyhow::{Context, Result};
 use libqinit::boot_config::BootConfig;
 use log::info;
-use slint::{SharedString, Timer, TimerMode};
+use slint::{Timer, TimerMode};
 slint::include_modules!();
 
 mod gui_fn;
@@ -18,8 +18,6 @@ mod gui_fn;
 fn main() -> Result<()> {
     env_logger::init();
     info!("Core Settings initializing");
-
-    let pubkey = libqinit::signing::read_public_key()?;
 
     // Boot configuration
     // We ignore boot configuration validity checks, since issues related
@@ -80,7 +78,6 @@ fn main() -> Result<()> {
     let encryption_change_password_timer = Rc::new(Timer::default());
     gui.on_change_user_password({
         let gui_weak = gui_weak.clone();
-        let pubkey = pubkey.clone();
         let boot_config = boot_config.clone();
         move |user, old_password, new_password, encrypted_storage_was_disabled| {
             gui_fn::users::change_user_password(
@@ -89,7 +86,6 @@ fn main() -> Result<()> {
                 old_password,
                 new_password,
                 encrypted_storage_was_disabled,
-                &pubkey,
                 &encryption_change_password_timer,
                 boot_config.clone(),
             )
@@ -99,14 +95,12 @@ fn main() -> Result<()> {
     let encryption_disable_timer = Rc::new(Timer::default());
     gui.on_disable_storage_encryption({
         let gui_weak = gui_weak.clone();
-        let pubkey = pubkey.clone();
         let boot_config = boot_config.clone();
         move |user, password| {
             gui_fn::users::disable_storage_encryption(
                 gui_weak.clone(),
                 user,
                 password,
-                &pubkey,
                 &encryption_disable_timer,
                 boot_config.clone(),
             );
@@ -150,6 +144,19 @@ fn main() -> Result<()> {
             }
         },
     );
+
+    let admin_login_verify_timer = Rc::new(Timer::default());
+    gui.on_admin_login_verify({
+        let gui_weak = gui_weak.clone();
+        move |username, password| {
+            gui_fn::users::admin_login_verify(
+                gui_weak.clone(),
+                &username.to_string(),
+                &password.to_string(),
+                &admin_login_verify_timer,
+            );
+        }
+    });
 
     // Virtual keyboard
     gui.global::<VirtualKeyboardHandler>().on_key_pressed({

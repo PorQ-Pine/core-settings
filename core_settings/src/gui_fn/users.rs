@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, Mutex, mpsc::Sender},
 };
 
+use libcoresettings::users::{AdminLoginStatus, is_admin};
 use libqinit::{
     boot_config::BootConfig,
     storage_encryption::{self, DISABLED_MODE_PASSWORD},
@@ -10,7 +11,6 @@ use libqinit::{
 
 use crate::gui_fn::{error_toast, toast};
 use crate::{CoreSettings, SettingsPage, SystemUser};
-use openssl::pkey::{PKey, Public};
 use slint::{SharedString, Timer, TimerMode, Weak};
 
 pub fn get_users(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {
@@ -39,17 +39,19 @@ pub fn get_user_details(gui: &CoreSettings, user: SharedString) {
     match storage_encryption::get_encryption_user_details(&user) {
         Ok(details) => gui.set_selected_user(SystemUser {
             encryption: details.encryption_enabled,
-            name: user,
+            name: user.clone(),
             encrypted_key: SharedString::from(&details.encrypted_key),
             salt: SharedString::from(&details.salt),
+            admin: is_admin(&user.clone().to_string()),
         }),
         Err(e) => {
             gui.set_selected_user(SystemUser {
                 // Default to false if there is an error, I guess
                 encryption: false,
-                name: user,
+                name: user.clone(),
                 encrypted_key: SharedString::new(),
                 salt: SharedString::new(),
+                admin: is_admin(&user.clone().to_string()),
             });
             error_toast(&gui, "Failed to get user's details", e.into())
         }
@@ -62,12 +64,10 @@ pub fn change_user_password(
     mut old_password: SharedString,
     new_password: SharedString,
     encrypted_storage_was_disabled: bool,
-    pubkey: &PKey<Public>,
     timer: &Rc<Timer>,
     boot_config: Arc<Mutex<BootConfig>>,
 ) {
     let gui_weak = gui_weak.clone();
-    let pubkey = pubkey.clone();
     timer.start(
         TimerMode::SingleShot,
         std::time::Duration::from_millis(100),
@@ -81,10 +81,10 @@ pub fn change_user_password(
                     }
 
                     if let Err(e) = libcoresettings::users::change_user_password(
-                        &pubkey,
+                        None,
                         &user,
                         &old_password,
-                        &new_password,
+                        Some(&new_password),
                     ) {
                         error_toast(&gui, "Failed to change user password", e.into());
                     } else {
@@ -109,12 +109,10 @@ pub fn disable_storage_encryption(
     gui_weak: Weak<CoreSettings>,
     user: SharedString,
     password: SharedString,
-    pubkey: &PKey<Public>,
     timer: &Rc<Timer>,
     boot_config: Arc<Mutex<BootConfig>>,
 ) {
     let gui_weak = gui_weak.clone();
-    let pubkey = pubkey.clone();
     timer.start(
         TimerMode::SingleShot,
         std::time::Duration::from_millis(100),
@@ -123,10 +121,10 @@ pub fn disable_storage_encryption(
             move || {
                 if let Some(gui) = gui_weak.upgrade() {
                     if let Err(e) = libcoresettings::users::change_user_password(
-                        &pubkey,
+                        None,
                         &user,
                         &password.to_string(),
-                        &DISABLED_MODE_PASSWORD,
+                        Some(&DISABLED_MODE_PASSWORD),
                     ) {
                         error_toast(&gui, "Failed to change user password", e.into());
                     }
@@ -179,6 +177,35 @@ pub fn create(
                         refresh_users_ui(&gui, boot_config.clone());
                         gui.set_sticky_toast(false);
                         toast(&gui, "User created successfully");
+                    }
+                }
+            }
+        },
+    )
+}
+
+pub fn admin_login_verify(
+    gui_weak: Weak<CoreSettings>,
+    username: &str,
+    password: &str,
+    timer: &Rc<Timer>,
+) {
+    let gui_weak = gui_weak.clone();
+    let username = username.to_owned();
+    let password = password.to_owned();
+    timer.start(
+        TimerMode::SingleShot,
+        std::time::Duration::from_millis(100),
+        {
+            move || {
+                if let Some(gui) = gui_weak.upgrade() {
+                    match libcoresettings::users::admin_login_verify(&username, &password) {
+                        AdminLoginStatus::Success => {
+                            gui.set_admin_lock(false);
+                            toast(&gui, "Login successful");
+                        }
+                        AdminLoginStatus::NotAdmin => toast(&gui, "User is not administrator"),
+                        AdminLoginStatus::Failure => toast(&gui, "Login failed"),
                     }
                 }
             }

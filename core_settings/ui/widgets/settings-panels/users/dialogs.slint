@@ -16,6 +16,7 @@ export component UserDialogs inherits Rectangle {
     callback change-user-password(string, string, string, bool);
     callback disable-storage-encryption(string, string);
     callback create-user(string, string, bool, bool, bool);
+    callback admin-login-verify(string, string);
 
     border-width: P.dialog-rectangle-thickness;
     border-color: black;
@@ -47,7 +48,7 @@ export component UserDialogs inherits Rectangle {
             }
 
             Text {
-                text: dialog == DialogType.EncryptionChangePassword ? "Changing password" : dialog == DialogType.EncryptionConfirmPassword ? "Confirming password" : dialog == DialogType.EncryptionNewPassword ? "Setting password" : "Creating user";
+                text: dialog == DialogType.ChangePassword ? "Changing password" : dialog == DialogType.ConfirmPassword ? "Confirming password" : dialog == DialogType.NewPassword ? "Setting password" : dialog == DialogType.NewUser ? "Creating user" : "Administrator login";
                 font-family: P.header-font-family;
                 font-size: P.default-font-size * P.dialog-sizes-multiplier;
                 font-weight: P.bold-font-weight;
@@ -69,17 +70,17 @@ export component UserDialogs inherits Rectangle {
         }
 
         username-or-current-password-edit := LineEdit {
-            default-height: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionConfirmPassword || dialog == DialogType.NewUser ? parent.height * 0.08 : 0;
+            default-height: dialog == DialogType.ChangePassword || dialog == DialogType.ConfirmPassword || dialog == DialogType.NewUser || dialog == DialogType.AdminLogin ? parent.height * 0.08 : 0;
             scaling-factor: P.scaling-factor;
             border-radius: P.radius;
             font-size: P.default-font-size * P.dialog-sizes-multiplier;
-            placeholder-text: dialog == DialogType.NewUser ? "Username" : "Current password";
-            input-type: dialog == DialogType.NewUser ? text : password;
-            visible: dialog != DialogType.EncryptionNewPassword;
+            placeholder-text: dialog == DialogType.NewUser || dialog == DialogType.AdminLogin ? "Username" : "Current password";
+            input-type: dialog == DialogType.NewUser || dialog == DialogType.AdminLogin ? text : password;
+            visible: dialog != DialogType.NewPassword;
         }
 
         Rectangle {
-            vertical-stretch: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.NewUser ? 0.05 : 0;
+            vertical-stretch: dialog == DialogType.ChangePassword || dialog == DialogType.NewUser || dialog == DialogType.AdminLogin ? 0.05 : 0;
         }
 
         new-password-edit := LineEdit {
@@ -87,14 +88,13 @@ export component UserDialogs inherits Rectangle {
             scaling-factor: P.scaling-factor;
             border-radius: P.radius;
             font-size: P.default-font-size * P.dialog-sizes-multiplier;
-            placeholder-text: "New password";
-            visible: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword || dialog == DialogType.NewUser;
+            placeholder-text: dialog == DialogType.ChangePassword ? "New password" : "Password";
+            visible: dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword || dialog == DialogType.NewUser || dialog == DialogType.AdminLogin;
             input-type: password;
         }
 
-        Rectangle {
+        if (dialog == DialogType.NewPassword || dialog == DialogType.ChangePassword || dialog == DialogType.NewUser || dialog == DialogType.AdminLogin): Rectangle {
             vertical-stretch: 0.05;
-            visible: dialog == DialogType.EncryptionChangePassword;
         }
 
         confirm-password-edit := LineEdit {
@@ -102,21 +102,20 @@ export component UserDialogs inherits Rectangle {
             scaling-factor: P.scaling-factor;
             border-radius: P.radius;
             font-size: P.default-font-size * P.dialog-sizes-multiplier;
-            placeholder-text: "Confirm new password";
-            visible: dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword || dialog == DialogType.NewUser;
+            placeholder-text: "Confirm password";
+            visible: dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword || dialog == DialogType.NewUser;
             input-type: password;
         }
 
-        Rectangle {
+        if (dialog == DialogType.NewUser): Rectangle {
             height: 20px;
-            visible: dialog == DialogType.NewUser;
         }
 
         HorizontalLayout {
             visible: dialog == DialogType.NewUser;
             Text {
                 font-family: P.regular-font-family;
-                text: "Mark as default user";
+                text: "Default user";
                 font-size: P.default-font-size * P.dialog-sizes-multiplier;
                 vertical-alignment: center;
             }
@@ -124,6 +123,31 @@ export component UserDialogs inherits Rectangle {
             Rectangle { }
 
             make-default-switch := Switch {
+                y: (parent.height - self.height) / 2;
+                width: P.switch-width * P.dialog-sizes-multiplier;
+                height: P.switch-height * P.dialog-sizes-multiplier;
+                border-radius: P.radius;
+                activated: false;
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 0.05;
+            visible: dialog == DialogType.NewUser;
+        }
+
+        HorizontalLayout {
+            visible: dialog == DialogType.NewUser;
+            Text {
+                font-family: P.regular-font-family;
+                text: "Administrator";
+                font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                vertical-alignment: center;
+            }
+
+            Rectangle { }
+
+            make-admin-switch := Switch {
                 y: (parent.height - self.height) / 2;
                 width: P.switch-width * P.dialog-sizes-multiplier;
                 height: P.switch-height * P.dialog-sizes-multiplier;
@@ -140,35 +164,39 @@ export component UserDialogs inherits Rectangle {
             font-family: P.header-font-family;
             font-size: P.default-font-size * P.dialog-sizes-multiplier;
             border-radius: P.radius;
-            text: "Confirm";
+            text: dialog == DialogType.AdminLogin ? "Log in" : "Confirm";
             clicked => {
-                if username-or-current-password-edit.text.is-empty && dialog != DialogType.EncryptionNewPassword {
-                    if dialog == DialogType.NewUser {
+                if username-or-current-password-edit.text.is-empty && dialog != DialogType.NewPassword {
+                    if dialog == DialogType.NewUser || dialog == DialogType.AdminLogin {
                         dialog-message = "Please provide a username";
                     } else {
                         dialog-message = "Please provide current password";
                     }
                     dialog = DialogType.Toast;
-                } else if new-password-edit.text != confirm-password-edit.text && (dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword || dialog == DialogType.NewUser) {
+                } else if new-password-edit.text != confirm-password-edit.text && (dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword || dialog == DialogType.NewUser) {
                     dialog-message = "Passwords do not match";
                     dialog = DialogType.Toast;
-                } else if new-password-edit.text == confirm-password-edit.text && new-password-edit.text.is-empty && (dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword || dialog == DialogType.NewUser) {
-                    dialog-message = "Cannot set empty password";
+                } else if new-password-edit.text == confirm-password-edit.text && new-password-edit.text.is-empty && (dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword || dialog == DialogType.NewUser || dialog == DialogType.AdminLogin) {
+                    dialog-message = "Password cannot be empty";
                     dialog = DialogType.Toast;
                 } else {
                     if dialog == DialogType.NewUser {
                         dialog-message = "Creating user";
-                    } else if dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword {
+                    } else if dialog == DialogType.AdminLogin {
+                        dialog-message = "Please wait";
+                    } else if dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword {
                         dialog-message = "Setting password";
-                    } else if dialog == DialogType.EncryptionConfirmPassword {
+                    } else if dialog == DialogType.ConfirmPassword {
                         dialog-message = "Disabling encrypted storage"
                     }
-                    if dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword {
+                    if dialog == DialogType.ChangePassword || dialog == DialogType.NewPassword {
                         change-user-password(selected-user.name, username-or-current-password-edit.text, new-password-edit.text, !selected-user.encryption);
-                    } else if dialog == DialogType.EncryptionConfirmPassword {
+                    } else if dialog == DialogType.ConfirmPassword {
                         disable-storage-encryption(selected-user.name, username-or-current-password-edit.text);
                     } else if dialog == DialogType.NewUser {
-                        create-user(username-or-current-password-edit.text, new-password-edit.text, false, false, make-default-switch.activated);
+                        create-user(username-or-current-password-edit.text, new-password-edit.text, make-admin-switch.activated, false, make-default-switch.activated);
+                    } else if dialog == DialogType.AdminLogin {
+                        admin-login-verify(username-or-current-password-edit.text, new-password-edit.text);
                     }
                     sticky-toast = true;
                     dialog = DialogType.Toast;

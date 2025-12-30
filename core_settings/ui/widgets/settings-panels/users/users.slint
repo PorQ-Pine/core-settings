@@ -14,6 +14,7 @@ export component Users inherits VerticalLayout {
     in property <string> default-user;
     in-out property <SystemUser> selected-user;
     in-out property <DialogType> dialog;
+    in-out property <bool> admin-lock;
     callback get-selected-user-details(string);
 
     HorizontalLayout {
@@ -74,9 +75,11 @@ export component Users inherits VerticalLayout {
                     }
                 }
                 Rectangle { }
+
                 HLine {
                     thickness: 1px;
                 }
+
                 MinorButton {
                     text: "New user";
                     horizontal-text-alignment: left;
@@ -87,6 +90,7 @@ export component Users inherits VerticalLayout {
                     height: 80px;
                     show-icon: true;
                     icon: @image-url("../../../../icons/plus.svg");
+                    enabled: !admin-lock;
                     clicked => {
                         TextInputInterface.text-input-focused = true;
                         dialog = DialogType.NewUser;
@@ -132,9 +136,9 @@ export component Users inherits VerticalLayout {
                         toggled => {
                             TextInputInterface.text-input-focused = true;
                             if selected-user.encryption {
-                                dialog = DialogType.EncryptionConfirmPassword;
+                                dialog = DialogType.ConfirmPassword;
                             } else {
-                                dialog = DialogType.EncryptionNewPassword;
+                                dialog = DialogType.NewPassword;
                             }
                         }
                     }
@@ -161,7 +165,7 @@ export component Users inherits VerticalLayout {
                         text: "Change";
                         clicked => {
                             TextInputInterface.text-input-focused = true;
-                            dialog = DialogType.EncryptionChangePassword;
+                            dialog = DialogType.ChangePassword;
                         }
                     }
                 }
@@ -241,6 +245,58 @@ export component Users inherits VerticalLayout {
                         wrap: char-wrap;
                         vertical-alignment: center;
                         horizontal-alignment: right;
+                    }
+                }
+
+                HLine {
+                    thickness: 1px;
+                }
+
+                HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Administrator";
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        width: 50px;
+                    }
+
+                    Text {
+                        text: selected-user.admin ? "Yes" : "No";
+                        font-family: P.console-font-family;
+                        font-size: P.console-body-font-size;
+                        wrap: char-wrap;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                HLine {
+                    thickness: 1px;
+                }
+
+                HorizontalLayout {
+                    padding-left: P.layout-padding * P.dialog-sizes-multiplier;
+                    padding-right: self.padding-left;
+                    Text {
+                        text: "Operation";
+                        vertical-alignment: center;
+                        color: !admin-lock ? #000000 : P.item-disabled-color;
+                    }
+
+                    Button {
+                        width: P.button-width * P.dialog-sizes-multiplier;
+                        height: P.button-height * P.dialog-sizes-multiplier;
+                        font-family: P.header-font-family;
+                        font-size: P.default-font-size * P.dialog-sizes-multiplier;
+                        border-radius: P.radius;
+                        text: "Delete";
+                        enabled: !admin-lock;
+                        clicked => {
+                        }
                     }
                 }
 
