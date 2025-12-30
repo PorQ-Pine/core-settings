@@ -87,6 +87,10 @@ export component Users inherits VerticalLayout {
                     height: 80px;
                     show-icon: true;
                     icon: @image-url("../../../../icons/plus.svg");
+                    clicked => {
+                        TextInputInterface.text-input-focused = true;
+                        dialog = DialogType.NewUser;
+                    }
                 }
             }
         }

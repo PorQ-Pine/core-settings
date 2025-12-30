@@ -13,7 +13,7 @@ use crate::{CoreSettings, SettingsPage, SystemUser};
 use openssl::pkey::{PKey, Public};
 use slint::{SharedString, Timer, TimerMode, Weak};
 
-pub fn get_users(gui: &CoreSettings) {
+pub fn get_users(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {
     match storage_encryption::get_users_using_storage_encryption() {
         Ok(users_using_storage_encryption) => {
             let users_shared_string_vec: Vec<SharedString> = users_using_storage_encryption
@@ -28,6 +28,10 @@ pub fn get_users(gui: &CoreSettings) {
             error_toast(&gui, "Failed to get users list", e.into());
             gui.set_settings_page(SettingsPage::None);
         }
+    }
+
+    if let Some(user) = boot_config.lock().unwrap().system.default_user.clone() {
+        gui.set_default_user(SharedString::from(user))
     }
 }
 
@@ -60,37 +64,42 @@ pub fn change_user_password(
     encrypted_storage_was_disabled: bool,
     pubkey: &PKey<Public>,
     timer: &Rc<Timer>,
+    boot_config: Arc<Mutex<BootConfig>>,
 ) {
     let gui_weak = gui_weak.clone();
     let pubkey = pubkey.clone();
     timer.start(
         TimerMode::SingleShot,
         std::time::Duration::from_millis(100),
-        move || {
-            if let Some(gui) = gui_weak.upgrade() {
-                if encrypted_storage_was_disabled {
-                    old_password = SharedString::from(storage_encryption::DISABLED_MODE_PASSWORD);
-                }
-
-                if let Err(e) = libcoresettings::users::change_user_password(
-                    &pubkey,
-                    &user,
-                    &old_password,
-                    &new_password,
-                ) {
-                    error_toast(&gui, "Failed to change user password", e.into());
-                } else {
-                    if let Err(e) = libcoresettings::users::change_encryption_password(
-                        &user.to_string(),
-                        &old_password.to_string(),
-                        &new_password.to_string(),
-                    ) {
-                        error_toast(&gui, "Failed to change encryption password", e.into());
-                    } else {
-                        toast(&gui, "Password set successfully");
+        {
+            let boot_config = boot_config.clone();
+            move || {
+                if let Some(gui) = gui_weak.upgrade() {
+                    if encrypted_storage_was_disabled {
+                        old_password =
+                            SharedString::from(storage_encryption::DISABLED_MODE_PASSWORD);
                     }
+
+                    if let Err(e) = libcoresettings::users::change_user_password(
+                        &pubkey,
+                        &user,
+                        &old_password,
+                        &new_password,
+                    ) {
+                        error_toast(&gui, "Failed to change user password", e.into());
+                    } else {
+                        if let Err(e) = libcoresettings::users::change_encryption_password(
+                            &user.to_string(),
+                            &old_password.to_string(),
+                            &new_password.to_string(),
+                        ) {
+                            error_toast(&gui, "Failed to change encryption password", e.into());
+                        } else {
+                            toast(&gui, "Password set successfully");
+                        }
+                    }
+                    refresh_users_ui(&gui, boot_config.clone());
                 }
-                refresh_users_ui(&gui);
             }
         },
     );
@@ -102,32 +111,36 @@ pub fn disable_storage_encryption(
     password: SharedString,
     pubkey: &PKey<Public>,
     timer: &Rc<Timer>,
+    boot_config: Arc<Mutex<BootConfig>>,
 ) {
     let gui_weak = gui_weak.clone();
     let pubkey = pubkey.clone();
     timer.start(
         TimerMode::SingleShot,
         std::time::Duration::from_millis(100),
-        move || {
-            if let Some(gui) = gui_weak.upgrade() {
-                if let Err(e) = libcoresettings::users::change_user_password(
-                    &pubkey,
-                    &user,
-                    &password.to_string(),
-                    &DISABLED_MODE_PASSWORD,
-                ) {
-                    error_toast(&gui, "Failed to change user password", e.into());
-                }
+        {
+            let boot_config = boot_config.clone();
+            move || {
+                if let Some(gui) = gui_weak.upgrade() {
+                    if let Err(e) = libcoresettings::users::change_user_password(
+                        &pubkey,
+                        &user,
+                        &password.to_string(),
+                        &DISABLED_MODE_PASSWORD,
+                    ) {
+                        error_toast(&gui, "Failed to change user password", e.into());
+                    }
 
-                if let Err(e) = libcoresettings::users::disable_encryption(
-                    &user.to_string(),
-                    &password.to_string(),
-                ) {
-                    error_toast(&gui, "Failed to disable encryption", e.into());
-                } else {
-                    toast(&gui, "Encryption successfully disabled");
+                    if let Err(e) = libcoresettings::users::disable_encryption(
+                        &user.to_string(),
+                        &password.to_string(),
+                    ) {
+                        error_toast(&gui, "Failed to disable encryption", e.into());
+                    } else {
+                        toast(&gui, "Encryption successfully disabled");
+                    }
+                    refresh_users_ui(&gui, boot_config.clone());
                 }
-                refresh_users_ui(&gui);
             }
         },
     );
@@ -142,7 +155,7 @@ pub fn create(
     timer: &Rc<Timer>,
     quit_sender: Sender<()>,
     quit_afterwards: bool,
-    boot_config: Option<Arc<Mutex<BootConfig>>>,
+    boot_config: Arc<Mutex<BootConfig>>,
 ) {
     let gui_weak = gui_weak.clone();
     timer.start(
@@ -162,6 +175,10 @@ pub fn create(
                         error_toast(&gui, "Failed to create user", e.into());
                     } else if quit_afterwards {
                         let _ = quit_sender.send(());
+                    } else {
+                        refresh_users_ui(&gui, boot_config.clone());
+                        gui.set_sticky_toast(false);
+                        toast(&gui, "User created successfully");
                     }
                 }
             }
@@ -169,7 +186,11 @@ pub fn create(
     )
 }
 
-fn refresh_users_ui(gui: &CoreSettings) {
-    gui.invoke_get_users();
-    gui.invoke_get_selected_user_details(gui.get_selected_user().name);
+fn refresh_users_ui(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {
+    get_users(&gui, boot_config);
+
+    let selected_user = gui.get_selected_user();
+    if !selected_user.name.is_empty() {
+        get_user_details(&gui, selected_user.name);
+    }
 }

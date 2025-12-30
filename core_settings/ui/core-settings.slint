@@ -143,7 +143,7 @@ export component CoreSettings inherits Window {
             dialog-message <=> dialog-message;
         }
 
-        if (dialog == DialogType.EncryptionConfirmPassword || dialog == DialogType.EncryptionChangePassword || dialog == DialogType.EncryptionNewPassword): UserDialogs {
+        if (dialog != DialogType.None && dialog != DialogType.Toast): UserDialogs {
             dialog <=> dialog;
             dialog-message <=> dialog-message;
             selected-user <=> selected-user;
@@ -155,6 +155,10 @@ export component CoreSettings inherits Window {
 
             disable-storage-encryption(user, password) => {
                 disable-storage-encryption(user, password);
+            }
+
+            create-user(username, password, admin, quit-afterwards, make-default) => {
+                create-user(username, password, admin, quit-afterwards, make-default);
             }
         }
     }

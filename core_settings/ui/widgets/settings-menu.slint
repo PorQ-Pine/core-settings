@@ -15,6 +15,7 @@ export component SettingsMenu inherits VerticalLayout {
 
     callback get-users();
     callback get-selected-user-details(string);
+    callback create-user(string, string, bool, bool, bool);
 
     if (settings-page == SettingsPage.None): VerticalLayout {
         SectionButton {

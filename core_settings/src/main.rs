@@ -10,7 +10,7 @@ use std::{
 use anyhow::{Context, Result};
 use libqinit::boot_config::BootConfig;
 use log::info;
-use slint::{Timer, TimerMode};
+use slint::{SharedString, Timer, TimerMode};
 slint::include_modules!();
 
 mod gui_fn;
@@ -60,9 +60,10 @@ fn main() -> Result<()> {
     // Control panels
     gui.on_get_users({
         let gui_weak = gui_weak.clone();
+        let boot_config = boot_config.clone();
         move || {
             if let Some(gui) = gui_weak.upgrade() {
-                gui_fn::users::get_users(&gui)
+                gui_fn::users::get_users(&gui, boot_config.clone())
             }
         }
     });
@@ -80,6 +81,7 @@ fn main() -> Result<()> {
     gui.on_change_user_password({
         let gui_weak = gui_weak.clone();
         let pubkey = pubkey.clone();
+        let boot_config = boot_config.clone();
         move |user, old_password, new_password, encrypted_storage_was_disabled| {
             gui_fn::users::change_user_password(
                 gui_weak.clone(),
@@ -89,6 +91,7 @@ fn main() -> Result<()> {
                 encrypted_storage_was_disabled,
                 &pubkey,
                 &encryption_change_password_timer,
+                boot_config.clone(),
             )
         }
     });
@@ -97,6 +100,7 @@ fn main() -> Result<()> {
     gui.on_disable_storage_encryption({
         let gui_weak = gui_weak.clone();
         let pubkey = pubkey.clone();
+        let boot_config = boot_config.clone();
         move |user, password| {
             gui_fn::users::disable_storage_encryption(
                 gui_weak.clone(),
@@ -104,6 +108,7 @@ fn main() -> Result<()> {
                 password,
                 &pubkey,
                 &encryption_disable_timer,
+                boot_config.clone(),
             );
         }
     });
@@ -114,13 +119,6 @@ fn main() -> Result<()> {
         let boot_config = boot_config.clone();
         let gui_weak = gui_weak.clone();
         move |username, password, admin, quit_afterwards, make_default| {
-            let boot_config_to_provide;
-            if make_default {
-                boot_config_to_provide = Some(boot_config.clone());
-            } else {
-                boot_config_to_provide = None;
-            }
-
             gui_fn::users::create(
                 gui_weak.clone(),
                 username,
@@ -130,7 +128,7 @@ fn main() -> Result<()> {
                 &create_user_timer,
                 quit_sender.clone(),
                 quit_afterwards,
-                boot_config_to_provide,
+                boot_config.clone(),
             );
         }
     });
