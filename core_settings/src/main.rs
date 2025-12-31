@@ -173,6 +173,28 @@ fn main() -> Result<()> {
         }
     });
 
+    gui.on_make_admin({
+        let gui_weak = gui_weak.clone();
+        let boot_config = boot_config.clone();
+        move |user| gui_fn::users::make_admin(gui_weak.clone(), &user, boot_config.clone())
+    });
+
+    gui.on_remove_admin({
+        let gui_weak = gui_weak.clone();
+        let boot_config = boot_config.clone();
+        move |user| {
+            gui_fn::users::remove_admin(gui_weak.clone(), &user, boot_config.clone());
+        }
+    });
+
+    gui.on_set_default_user({
+        let gui_weak = gui_weak.clone();
+        let boot_config = boot_config.clone();
+        move |user| {
+            gui_fn::users::set_default(gui_weak.clone(), &user.to_string(), boot_config.clone());
+        }
+    });
+
     // Virtual keyboard
     gui.global::<VirtualKeyboardHandler>().on_key_pressed({
         let gui_weak = gui_weak.clone();

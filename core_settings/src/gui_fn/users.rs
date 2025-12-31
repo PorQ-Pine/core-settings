@@ -13,6 +13,8 @@ use crate::gui_fn::{error_toast, toast};
 use crate::{CoreSettings, SettingsPage, SystemUser};
 use slint::{SharedString, Timer, TimerMode, Weak};
 
+const FAILED_ADMIN_STATUS_TOGGLE: &str = "Failed to change administrator status";
+
 pub fn get_users(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {
     match storage_encryption::get_users_using_storage_encryption() {
         Ok(users_using_storage_encryption) => {
@@ -32,6 +34,8 @@ pub fn get_users(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {
 
     if let Some(user) = boot_config.lock().unwrap().system.default_user.clone() {
         gui.set_default_user(SharedString::from(user))
+    } else {
+        gui.set_default_user(SharedString::from(String::new()))
     }
 }
 
@@ -245,6 +249,49 @@ pub fn delete(
             }
         },
     );
+}
+
+pub fn make_admin(gui_weak: Weak<CoreSettings>, user: &str, boot_config: Arc<Mutex<BootConfig>>) {
+    if let Some(gui) = gui_weak.upgrade() {
+        if let Err(e) = libcoresettings::users::change_admin_status(&user, true) {
+            error_toast(&gui, &FAILED_ADMIN_STATUS_TOGGLE, e.into());
+        }
+        refresh_users_ui(&gui, boot_config.clone());
+    }
+}
+
+pub fn remove_admin(gui_weak: Weak<CoreSettings>, user: &str, boot_config: Arc<Mutex<BootConfig>>) {
+    if let Some(gui) = gui_weak.upgrade() {
+        if sufficient_number_of_admin_users_remaining(&gui) {
+            if let Err(e) = libcoresettings::users::change_admin_status(&user, false) {
+                error_toast(&gui, &FAILED_ADMIN_STATUS_TOGGLE, e.into());
+            }
+            refresh_users_ui(&gui, boot_config.clone());
+        } else {
+            toast(&gui, "At least one administrator required");
+        }
+    }
+}
+
+pub fn set_default(gui_weak: Weak<CoreSettings>, user: &str, boot_config: Arc<Mutex<BootConfig>>) {
+    if let Some(gui) = gui_weak.upgrade() {
+        if user.is_empty() {
+            libcoresettings::users::set_default(None, boot_config.clone());
+        } else {
+            libcoresettings::users::set_default(Some(&user), boot_config.clone());
+        }
+        refresh_users_ui(&gui, boot_config.clone());
+    }
+}
+
+fn sufficient_number_of_admin_users_remaining(gui: &CoreSettings) -> bool {
+    match libcoresettings::users::count_admin_users() {
+        Ok(count) => return count >= 2,
+        Err(e) => {
+            error_toast(&gui, "Failed to count admin users", e.into());
+            return false;
+        }
+    };
 }
 
 fn refresh_users_ui(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {

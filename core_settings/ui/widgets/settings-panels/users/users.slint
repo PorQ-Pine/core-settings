@@ -21,6 +21,9 @@ export component Users inherits VerticalLayout {
     property <string> show-prompt: "Tap to show";
 
     callback get-selected-user-details(string);
+    callback make-admin(string);
+    callback remove-admin(string);
+    callback set-default-user(string);
 
     HorizontalLayout {
         spacing: P.layout-spacing;
@@ -259,13 +262,20 @@ export component Users inherits VerticalLayout {
                         width: 50px;
                     }
 
-                    Text {
-                        text: default-user == selected-user.name ? "Yes" : "No";
-                        font-family: P.console-font-family;
-                        font-size: P.console-body-font-size;
-                        wrap: char-wrap;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
+                    Switch {
+                        y: (parent.height - self.height) / 2;
+                        width: P.switch-width * P.dialog-sizes-multiplier;
+                        height: P.switch-height * P.dialog-sizes-multiplier;
+                        border-radius: P.radius;
+                        special-activation: true;
+                        activated: default-user == selected-user.name;
+                        toggled => {
+                            if self.activated {
+                                set-default-user("");
+                            } else {
+                                set-default-user(selected-user.name);
+                            }
+                        }
                     }
                 }
 
@@ -279,19 +289,28 @@ export component Users inherits VerticalLayout {
                     Text {
                         text: "Administrator";
                         vertical-alignment: center;
+                        color: !admin-lock ? #000000 : P.item-disabled-color;
                     }
 
                     Rectangle {
                         width: 50px;
                     }
 
-                    Text {
-                        text: selected-user.admin ? "Yes" : "No";
-                        font-family: P.console-font-family;
-                        font-size: P.console-body-font-size;
-                        wrap: char-wrap;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
+                    Switch {
+                        enabled: !admin-lock;
+                        y: (parent.height - self.height) / 2;
+                        width: P.switch-width * P.dialog-sizes-multiplier;
+                        height: P.switch-height * P.dialog-sizes-multiplier;
+                        border-radius: P.radius;
+                        special-activation: true;
+                        activated: selected-user.admin;
+                        toggled => {
+                            if self.activated {
+                                remove-admin(selected-user.name);
+                            } else {
+                                make-admin(selected-user.name);
+                            }
+                        }
                     }
                 }
 

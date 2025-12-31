@@ -2,7 +2,9 @@ import { Properties as P } from "../../ui-common/properties.slint";
 import { SettingsPage, SystemUser, DialogType } from "../enumerations.slint";
 
 import { SectionButton } from "../../ui-common/sectionbutton.slint";
-import { Users as UsersSettings } from "../widgets/settings-panels/users/users.slint";
+import {
+    Users as UsersSettings,
+} from "../widgets/settings-panels/users/users.slint";
 
 export component SettingsMenu inherits VerticalLayout {
     in property <string> default-user;
@@ -19,7 +21,9 @@ export component SettingsMenu inherits VerticalLayout {
     callback get-users();
     callback get-selected-user-details(string);
     callback create-user(string, string, bool, bool, bool);
-
+    callback make-admin(string);
+    callback remove-admin(string);
+    callback set-default-user(string);
     if (settings-page == SettingsPage.None): VerticalLayout {
         SectionButton {
             text: "Users & storage encryption";
@@ -47,6 +51,18 @@ export component SettingsMenu inherits VerticalLayout {
 
         get-selected-user-details(string) => {
             get-selected-user-details(string);
+        }
+
+        make-admin(user) => {
+            make-admin(user);
+        }
+
+        remove-admin(user) => {
+            remove-admin(user);
+        }
+
+        set-default-user(user) => {
+            set-default-user(user);
         }
     }
 }

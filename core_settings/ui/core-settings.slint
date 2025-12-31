@@ -53,6 +53,9 @@ export component CoreSettings inherits Window {
     callback create-user(string, string, bool, bool, bool);
     callback admin-login-verify(string, string);
     callback delete-user(string);
+    callback make-admin(string);
+    callback remove-admin(string);
+    callback set-default-user(string);
     callback quit();
 
     // UI
@@ -140,6 +143,18 @@ export component CoreSettings inherits Window {
 
                 get-selected-user-details(user) => {
                     get-selected-user-details(user);
+                }
+
+                make-admin(user) => {
+                    make-admin(user);
+                }
+
+                remove-admin(user) => {
+                    remove-admin(user);
+                }
+
+                set-default-user(user) => {
+                    set-default-user(user);
                 }
             }
         }

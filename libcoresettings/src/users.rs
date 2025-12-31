@@ -271,6 +271,24 @@ pub fn set_default_user(user: &str, boot_config: Arc<Mutex<BootConfig>>) -> Resu
     Ok(())
 }
 
+pub fn add_to_group(user: &str, group: &str) -> Result<()> {
+    Ok(run_chroot_command(&[
+        "/usr/sbin/gpasswd",
+        "-a",
+        &user,
+        &group,
+    ])?)
+}
+
+pub fn remove_from_group(user: &str, group: &str) -> Result<()> {
+    Ok(run_chroot_command(&[
+        "/usr/sbin/gpasswd",
+        "--delete",
+        &user,
+        &group,
+    ])?)
+}
+
 pub fn is_admin(user: &str) -> bool {
     if let Err(_) = run_chroot_command(&[
         "/bin/sh",
@@ -295,6 +313,64 @@ pub fn admin_login_verify(username: &str, password: &str) -> AdminLoginStatus {
         return AdminLoginStatus::Failure;
     } else {
         return AdminLoginStatus::Success;
+    }
+}
+
+pub fn change_admin_status(user: &str, make_admin: bool) -> Result<()> {
+    let is_admin = is_admin(&user);
+    if make_admin && is_admin {
+        info!("User '{}' is already an administrator", &user);
+        return Ok(());
+    } else if !make_admin && !is_admin {
+        info!(
+            "User '{}' already does not have administrator rights",
+            &user
+        );
+        return Ok(());
+    }
+
+    if make_admin {
+        add_to_group(&user, &ADMIN_GROUP)?;
+    } else {
+        remove_from_group(&user, &ADMIN_GROUP)?;
+    }
+
+    Ok(())
+}
+
+pub fn count_admin_users() -> Result<usize> {
+    // ChatGPT did help
+    let contents = fs::read_to_string(&format!("{}/etc/group", &OVERLAY_MOUNTPOINT))
+        .with_context(|| "Failed to read groups file")?;
+
+    for line in contents.lines() {
+        if line.starts_with(&format!("{}:", &ADMIN_GROUP)) {
+            let fields: Vec<&str> = line.split(':').collect();
+
+            let member_count = fields
+                .get(3)
+                .map(|members| {
+                    if members.is_empty() {
+                        0
+                    } else {
+                        members.split(',').count()
+                    }
+                })
+                .unwrap_or(0);
+
+            info!("Found {} administrator user(s)", &member_count);
+            return Ok(member_count);
+        }
+    }
+
+    Ok(0)
+}
+
+pub fn set_default(user: Option<&str>, boot_config: Arc<Mutex<BootConfig>>) {
+    if let Some(user) = user {
+        boot_config.lock().unwrap().system.default_user = Some(user.to_string());
+    } else {
+        boot_config.lock().unwrap().system.default_user = None;
     }
 }
 
