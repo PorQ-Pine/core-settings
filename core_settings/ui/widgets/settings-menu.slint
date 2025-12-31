@@ -6,12 +6,14 @@ import { Users as UsersSettings } from "../widgets/settings-panels/users/users.s
 
 export component SettingsMenu inherits VerticalLayout {
     in property <string> default-user;
-    in property <[string]> users;
+    in-out property <[string]> users;
 
     in-out property <SettingsPage> settings-page: SettingsPage.None;
     in-out property <SystemUser> selected-user;
     in-out property <string> section-header-title;
     in-out property <DialogType> dialog;
+    in-out property <string> dialog-message;
+    in-out property <string> user-to-delete;
     in-out property <bool> admin-lock;
 
     callback get-users();
@@ -36,7 +38,9 @@ export component SettingsMenu inherits VerticalLayout {
 
     if (settings-page == SettingsPage.StorageEncryptionOptions): UsersSettings {
         selected-user <=> selected-user;
+        user-to-delete <=> user-to-delete;
         dialog <=> dialog;
+        dialog-message <=> dialog-message;
         default-user <=> default-user;
         users <=> users;
         admin-lock <=> admin-lock;

@@ -10,16 +10,21 @@ import { MinorButton } from "../../../../ui-common/minorbutton.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export component Users inherits VerticalLayout {
-    in property <[string]> users;
+    in-out property <[string]> users;
     in property <string> default-user;
     in-out property <SystemUser> selected-user;
     in-out property <DialogType> dialog;
+    in-out property <string> dialog-message;
+    in-out property <string> user-to-delete;
     in-out property <bool> admin-lock;
+
+    property <string> show-prompt: "Tap to show";
+
     callback get-selected-user-details(string);
 
     HorizontalLayout {
         spacing: P.layout-spacing;
-        if (users.length > 0): ScrollView {
+        ScrollView {
             mouse-drag-pan-enabled: true;
             width: 35%;
             VerticalLayout {
@@ -99,7 +104,7 @@ export component Users inherits VerticalLayout {
             }
         }
 
-        if (users.length > 0): VLine {
+        VLine {
             thickness: 2px;
         }
 
@@ -186,13 +191,21 @@ export component Users inherits VerticalLayout {
                         width: 50px;
                     }
 
-                    Text {
-                        text: selected-user.encrypted-key;
-                        font-family: P.console-font-family;
-                        font-size: P.console-body-font-size;
-                        wrap: char-wrap;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
+                    TouchArea {
+                        property <bool> show: false;
+                        Text {
+                            width: parent.width;
+                            text: show ? selected-user.encrypted-key : show-prompt;
+                            font-family: P.console-font-family;
+                            font-size: P.console-body-font-size;
+                            wrap: char-wrap;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
+                        }
+
+                        clicked => {
+                            show = !show;
+                        }
                     }
                 }
 
@@ -212,13 +225,21 @@ export component Users inherits VerticalLayout {
                         width: 50px;
                     }
 
-                    Text {
-                        text: selected-user.salt;
-                        font-family: P.console-font-family;
-                        font-size: P.console-body-font-size;
-                        wrap: char-wrap;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
+                    TouchArea {
+                        property <bool> show: false;
+                        Text {
+                            width: parent.width;
+                            text: show ? selected-user.salt : show-prompt;
+                            font-family: P.console-font-family;
+                            font-size: P.console-body-font-size;
+                            wrap: char-wrap;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
+                        }
+
+                        clicked => {
+                            show = !show;
+                        }
                     }
                 }
 
@@ -282,7 +303,7 @@ export component Users inherits VerticalLayout {
                     padding-left: P.layout-padding * P.dialog-sizes-multiplier;
                     padding-right: self.padding-left;
                     Text {
-                        text: "Operation";
+                        text: "Special";
                         vertical-alignment: center;
                         color: !admin-lock ? #000000 : P.item-disabled-color;
                     }
@@ -296,6 +317,9 @@ export component Users inherits VerticalLayout {
                         text: "Delete";
                         enabled: !admin-lock;
                         clicked => {
+                            user-to-delete = selected-user.name;
+                            dialog-message = "This will delete all of this user's personal data.\n\nAre you sure you want to continue?";
+                            dialog = DialogType.ConfirmUserDeletion;
                         }
                     }
                 }

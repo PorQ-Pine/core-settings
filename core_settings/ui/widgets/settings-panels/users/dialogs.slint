@@ -11,6 +11,7 @@ export component UserDialogs inherits Rectangle {
     in-out property <DialogType> dialog;
     in-out property <string> dialog-message;
     in-out property <SystemUser> selected-user;
+    in-out property <[string]> users;
     in-out property <bool> sticky-toast;
 
     callback change-user-password(string, string, string, bool);
@@ -127,7 +128,7 @@ export component UserDialogs inherits Rectangle {
                 width: P.switch-width * P.dialog-sizes-multiplier;
                 height: P.switch-height * P.dialog-sizes-multiplier;
                 border-radius: P.radius;
-                activated: false;
+                activated: users.length == 0 ? true : false;
             }
         }
 
@@ -143,16 +144,18 @@ export component UserDialogs inherits Rectangle {
                 text: "Administrator";
                 font-size: P.default-font-size * P.dialog-sizes-multiplier;
                 vertical-alignment: center;
+                color: users.length != 0 ? #000000 : P.item-disabled-color;
             }
 
             Rectangle { }
 
             make-admin-switch := Switch {
+                enabled: users.length != 0;
                 y: (parent.height - self.height) / 2;
                 width: P.switch-width * P.dialog-sizes-multiplier;
                 height: P.switch-height * P.dialog-sizes-multiplier;
                 border-radius: P.radius;
-                activated: false;
+                activated: users.length == 0 ? true : false;
             }
         }
 

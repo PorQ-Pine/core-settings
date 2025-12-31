@@ -16,6 +16,7 @@ export { VirtualKeyboardHandler, KeyModel }
 import { ScrollView } from "std-widgets.slint";
 
 import { UserDialogs } from "widgets/settings-panels/users/dialogs.slint";
+import { Dialog } from "../ui-common/dialog.slint";
 
 export component CoreSettings inherits Window {
     // Properties
@@ -27,15 +28,18 @@ export component CoreSettings inherits Window {
     in-out property <SettingsPage> settings-page;
     in-out property <DialogType> dialog;
     in-out property <string> dialog-message;
+    in-out property <string> user-to-delete;
     in-out property <SystemUser> selected-user;
     in-out property <int> dialog-millis-count;
     in-out property <bool> sticky-toast;
-    in-out property <bool> admin-lock: true;
+    in-out property <bool> admin-lock-override: users.length == 0;
+    in-out property <bool> admin-lock: admin-lock-override ? false : admin-lock-set;
+    in-out property <bool> admin-lock-set: true;
     in-out property <image> lock-button-icon: admin-lock ? @image-url("../icons/lock.svg") : @image-url("../icons/lock-open.svg");
 
     in-out property <string> section-header-title: core-settings-header;
     in property <string> default-user;
-    in property <[string]> users;
+    in-out property <[string]> users;
     in-out property <float> scaling-factor <=> P.scaling-factor;
 
     // Constants
@@ -48,6 +52,7 @@ export component CoreSettings inherits Window {
     callback disable-storage-encryption(string, string);
     callback create-user(string, string, bool, bool, bool);
     callback admin-login-verify(string, string);
+    callback delete-user(string);
     callback quit();
 
     // UI
@@ -97,6 +102,7 @@ export component CoreSettings inherits Window {
                 }
 
                 if (settings-page == SettingsPage.StorageEncryptionOptions): IconButton {
+                    enabled: !admin-lock-override;
                     icon: lock-button-icon;
                     border-radius <=> P.radius;
                     height <=> P.icon-button-height;
@@ -107,7 +113,7 @@ export component CoreSettings inherits Window {
                             TextInputInterface.text-input-focused = true;
                             dialog = DialogType.AdminLogin;
                         } else {
-                            admin-lock = !admin-lock;
+                            admin-lock-set = !admin-lock-set;
                         }
                     }
                 }
@@ -122,6 +128,8 @@ export component CoreSettings inherits Window {
                 settings-page <=> settings-page;
                 selected-user <=> selected-user;
                 dialog <=> dialog;
+                dialog-message <=> dialog-message;
+                user-to-delete <=> user-to-delete;
                 default-user <=> default-user;
                 users <=> users;
                 admin-lock <=> admin-lock;
@@ -163,11 +171,33 @@ export component CoreSettings inherits Window {
             dialog-message <=> dialog-message;
         }
 
-        if (dialog != DialogType.None && dialog != DialogType.Toast): UserDialogs {
+        if (dialog == DialogType.ConfirmUserDeletion): Dialog {
+            border-radius: P.radius;
+            width: 0.45 * P.rwidth;
+            height: 0.3 * P.rheight;
+            x: (root.width - self.width) / 2;
+            y: (root.height - self.height) / 2;
+            text: root.dialog-message;
+            button-font-family: P.header-font-family;
+            cancel => {
+                dialog = DialogType.None;
+            }
+            confirm => {
+                if dialog == DialogType.ConfirmUserDeletion {
+                    dialog-message = "Deleting user";
+                    dialog = DialogType.Toast;
+                    delete-user(user-to-delete);
+                    user-to-delete = "";
+                }
+            }
+        }
+
+        if (dialog != DialogType.None && dialog != DialogType.Toast && dialog != DialogType.ConfirmUserDeletion): UserDialogs {
             dialog <=> dialog;
             dialog-message <=> dialog-message;
             selected-user <=> selected-user;
             sticky-toast <=> sticky-toast;
+            users <=> users;
 
             change-user-password(user, old-password, new-password, encrypted-storage-was-disabled) => {
                 change-user-password(user, old-password, new-password, encrypted-storage-was-disabled);

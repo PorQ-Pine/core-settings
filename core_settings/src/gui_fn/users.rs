@@ -174,6 +174,7 @@ pub fn create(
                     } else if quit_afterwards {
                         let _ = quit_sender.send(());
                     } else {
+                        gui.set_admin_lock_set(false);
                         refresh_users_ui(&gui, boot_config.clone());
                         gui.set_sticky_toast(false);
                         toast(&gui, "User created successfully");
@@ -201,16 +202,49 @@ pub fn admin_login_verify(
                 if let Some(gui) = gui_weak.upgrade() {
                     match libcoresettings::users::admin_login_verify(&username, &password) {
                         AdminLoginStatus::Success => {
-                            gui.set_admin_lock(false);
+                            gui.set_admin_lock_set(false);
                             toast(&gui, "Login successful");
                         }
-                        AdminLoginStatus::NotAdmin => toast(&gui, "User is not administrator"),
+                        AdminLoginStatus::NotAdmin => toast(&gui, "Administrator user not found"),
                         AdminLoginStatus::Failure => toast(&gui, "Login failed"),
                     }
                 }
             }
         },
     )
+}
+
+pub fn delete(
+    gui_weak: Weak<CoreSettings>,
+    user: &str,
+    timer: &Rc<Timer>,
+    boot_config: Arc<Mutex<BootConfig>>,
+) {
+    let gui_weak = gui_weak.clone();
+    let user = user.to_owned();
+    timer.start(
+        TimerMode::SingleShot,
+        std::time::Duration::from_millis(100),
+        {
+            move || {
+                if let Some(gui) = gui_weak.upgrade() {
+                    if let Err(e) = libcoresettings::users::delete(&user) {
+                        error_toast(&gui, "Failed to delete user", e.into());
+                    } else {
+                        toast(&gui, "User deleted successfully");
+                    }
+                    gui.set_selected_user(SystemUser {
+                        admin: false,
+                        encrypted_key: SharedString::from(String::new()),
+                        encryption: false,
+                        name: SharedString::from(String::new()),
+                        salt: SharedString::from(String::new()),
+                    });
+                    refresh_users_ui(&gui, boot_config.clone());
+                }
+            }
+        },
+    );
 }
 
 fn refresh_users_ui(gui: &CoreSettings, boot_config: Arc<Mutex<BootConfig>>) {

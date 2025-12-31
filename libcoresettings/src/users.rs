@@ -287,14 +287,14 @@ pub fn is_admin(user: &str) -> bool {
 }
 
 pub fn admin_login_verify(username: &str, password: &str) -> AdminLoginStatus {
-    if let Err(_) = change_user_password(None, &username, &password, None) {
-        return AdminLoginStatus::Failure;
+    if !is_admin(&username) {
+        return AdminLoginStatus::NotAdmin;
     }
 
-    if is_admin(&username) {
-        return AdminLoginStatus::Success;
+    if let Err(_) = change_user_password(None, &username, &password, None) {
+        return AdminLoginStatus::Failure;
     } else {
-        return AdminLoginStatus::NotAdmin;
+        return AdminLoginStatus::Success;
     }
 }
 
@@ -305,6 +305,10 @@ pub fn create(
     make_default: bool,
     boot_config: Arc<Mutex<BootConfig>>,
 ) -> Result<()> {
+    if username.contains(".") || username.contains("/") {
+        return Err(anyhow::anyhow!("Username contains forbidden characters"));
+    }
+
     create_user_chroot_command(&OVERLAY_MOUNTPOINT, &username, admin)
         .with_context(|| "Failed to create UNIX user in chroot")?;
     change_user_password_chroot_command(&OVERLAY_MOUNTPOINT, &username, None, &password, false)
@@ -343,6 +347,26 @@ pub fn create(
 
     if make_default {
         set_default_user(&username, boot_config).with_context(|| "Failed to set default user")?
+    }
+
+    Ok(())
+}
+
+pub fn delete(user: &str) -> Result<()> {
+    if !user.is_empty() {
+        let home_dir_path = format!("{}/{}/{}", &OVERLAY_MOUNTPOINT, &SYSTEM_HOME_DIR, &user);
+        let encrypted_home_dir_path =
+            format!("{}/{}/.{}", &OVERLAY_MOUNTPOINT, &SYSTEM_HOME_DIR, &user);
+
+        fs::remove_dir_all(&home_dir_path)
+            .with_context(|| "Failed to remove user's home directory")?;
+        fs::remove_dir_all(&encrypted_home_dir_path)
+            .with_context(|| "Failed to remove user's encrypted home directory")?;
+
+        run_chroot_command(&["/usr/sbin/userdel", "-f", "-r", &user])
+            .with_context(|| "Failed to remove UNIX user from overlay filesystem")?;
+    } else {
+        return Err(anyhow::anyhow!("No username provided"));
     }
 
     Ok(())

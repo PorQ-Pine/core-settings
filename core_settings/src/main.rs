@@ -133,6 +133,7 @@ fn main() -> Result<()> {
         std::time::Duration::from_millis(100),
         {
             let gui_weak = gui_weak.clone();
+            let boot_config = boot_config.clone();
             move || {
                 if let Ok(()) = quit_receiver.try_recv() {
                     if let Err(e) = quit(&original_boot_config, boot_config.clone()) {
@@ -155,6 +156,20 @@ fn main() -> Result<()> {
                 &password.to_string(),
                 &admin_login_verify_timer,
             );
+        }
+    });
+
+    let delete_user_timer = Rc::new(Timer::default());
+    gui.on_delete_user({
+        let gui_weak = gui_weak.clone();
+        let boot_config = boot_config.clone();
+        move |user| {
+            gui_fn::users::delete(
+                gui_weak.clone(),
+                &user.to_string(),
+                &delete_user_timer,
+                boot_config.clone(),
+            )
         }
     });
 
