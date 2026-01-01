@@ -434,9 +434,9 @@ pub fn delete(user: &str) -> Result<()> {
         let encrypted_home_dir_path =
             format!("{}/{}/.{}", &OVERLAY_MOUNTPOINT, &SYSTEM_HOME_DIR, &user);
 
-        fs::remove_dir_all(&home_dir_path)
+        system::rm_dir_all(&home_dir_path)
             .with_context(|| "Failed to remove user's home directory")?;
-        fs::remove_dir_all(&encrypted_home_dir_path)
+        system::rm_dir_all(&encrypted_home_dir_path)
             .with_context(|| "Failed to remove user's encrypted home directory")?;
 
         run_chroot_command(&["/usr/sbin/userdel", "-f", "-r", &user])
