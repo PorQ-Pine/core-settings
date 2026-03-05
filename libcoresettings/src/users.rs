@@ -13,7 +13,7 @@ use openssl::pkey::PKey;
 use openssl::pkey::Public;
 
 const ADMIN_GROUP: &str = "wheel";
-
+const INPUT_GROUP: &str = "input"; // for lisgd gestures
 pub enum AdminLoginStatus {
     Success,
     Failure,
@@ -137,24 +137,23 @@ fn change_user_password_chroot_command(
 fn create_user_chroot_command(chroot_path: &str, username: &str, admin: bool) -> Result<()> {
     let useradd_path = "/usr/sbin/useradd";
 
-    if admin {
-        system::run_command(
-            "/usr/sbin/chroot",
-            &[
-                &chroot_path,
-                &useradd_path,
-                "-M",
-                "-G",
-                &ADMIN_GROUP,
-                &username,
-            ],
-        )?;
+    let groups = if admin {
+        format!("{},{}", ADMIN_GROUP, INPUT_GROUP)
     } else {
-        system::run_command(
-            "/usr/sbin/chroot",
-            &[&chroot_path, &useradd_path, "-M", &username],
-        )?;
-    }
+        INPUT_GROUP.to_string()
+    };
+
+    system::run_command(
+        "/usr/sbin/chroot",
+        &[
+            &chroot_path,
+            &useradd_path,
+            "-M",
+            "-G",
+            &groups,
+            &username,
+        ],
+    )?;
 
     Ok(())
 }
