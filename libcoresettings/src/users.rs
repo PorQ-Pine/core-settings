@@ -145,14 +145,7 @@ fn create_user_chroot_command(chroot_path: &str, username: &str, admin: bool) ->
 
     system::run_command(
         "/usr/sbin/chroot",
-        &[
-            &chroot_path,
-            &useradd_path,
-            "-M",
-            "-G",
-            &groups,
-            &username,
-        ],
+        &[&chroot_path, &useradd_path, "-M", "-G", &groups, &username],
     )?;
 
     Ok(())
@@ -378,7 +371,7 @@ pub fn create(
     password: &str,
     admin: bool,
     make_default: bool,
-    boot_config: Arc<Mutex<BootConfig>>,
+    boot_config: Option<Arc<Mutex<BootConfig>>>,
 ) -> Result<()> {
     if username.contains(".") || username.contains("/") {
         return Err(anyhow::anyhow!("Username contains forbidden characters"));
@@ -420,7 +413,7 @@ pub fn create(
     storage_encryption::unmount_storage(&username)
         .with_context(|| "Failed to unmount encrypted storage")?;
 
-    if make_default {
+    if make_default && let Some(boot_config) = boot_config {
         set_default_user(&username, boot_config).with_context(|| "Failed to set default user")?
     }
 
