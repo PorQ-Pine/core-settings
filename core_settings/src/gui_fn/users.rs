@@ -172,7 +172,7 @@ pub fn create(
                         &password,
                         admin,
                         make_default,
-                        boot_config.clone(),
+                        Some(boot_config.clone()),
                     ) {
                         error_toast(&gui, "Failed to create user", e.into());
                     } else if quit_afterwards {
