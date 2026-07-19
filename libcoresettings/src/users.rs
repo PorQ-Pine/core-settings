@@ -372,6 +372,7 @@ pub fn create(
     admin: bool,
     make_default: bool,
     boot_config: Option<Arc<Mutex<BootConfig>>>,
+    unmount_storage: bool,
 ) -> Result<()> {
     if username.contains(".") || username.contains("/") {
         return Err(anyhow::anyhow!("Username contains forbidden characters"));
@@ -410,8 +411,10 @@ pub fn create(
     ])
     .with_context(|| "Failed to set filesystem permissions")?;
 
-    storage_encryption::unmount_storage(&username)
-        .with_context(|| "Failed to unmount encrypted storage")?;
+    if unmount_storage {
+        storage_encryption::unmount_storage(&username)
+            .with_context(|| "Failed to unmount encrypted storage")?;
+    }
 
     if make_default && let Some(boot_config) = boot_config {
         set_default_user(&username, boot_config).with_context(|| "Failed to set default user")?
